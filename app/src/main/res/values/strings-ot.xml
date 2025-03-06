@@ -126,7 +126,7 @@ while also allowing users to translate our app as well. New, specific strings to
 
     <string name="import_innertune_tooltip">Restoring InnerTune backups are supported, albeit a possibility of anomalies due to technical limitations</string>
     <string name="import_m3u">Import a playlist (m3u)</string>
-    <string name="import_online">Import a playlist (online autosearch)</string>
+    <string name="import_online">Import a playlist (m3u) (autosearch)</string>
     <string name="m3u_import_playlist_failed">Failed to import playlist</string>
 
 <!-- Scanner settings -->
