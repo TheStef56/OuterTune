@@ -23,6 +23,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.TextUnit
@@ -237,7 +238,14 @@ fun AddToPlaylistDialogOnline(
                         }
                     },
                     title = stringResource(R.string.liked_songs),
-                    thumbnailContent = {},
+                    thumbnailContent = {
+                        Image(
+                            painter = painterResource(id = R.drawable.favorite), // The XML image
+                            contentDescription = null,
+                            modifier = Modifier.size(40.dp), // Adjust size as needed
+                            colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onBackground) // Optional tinting
+                        )
+                    },
                     trailingContent = {}
                 )
             }
