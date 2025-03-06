@@ -3,7 +3,6 @@ package com.dd3boh.outertune.viewmodels
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import com.dd3boh.outertune.MainActivity
@@ -162,7 +161,7 @@ class BackupRestoreViewModel @Inject constructor(
         }
         return Triple(songs, rejectedSongs, uri.path?.substringAfterLast('/')?.substringBeforeLast('.') ?: "")
     }
-    fun prova(
+    fun loadM3UOnline(
         context: Context,
         uri: Uri,
     ): ArrayList<Song> {

@@ -20,7 +20,6 @@ import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.os.Looper
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -213,7 +212,6 @@ import com.dd3boh.outertune.ui.theme.extractThemeColor
 import com.dd3boh.outertune.ui.utils.DEFAULT_SCAN_PATH
 import com.dd3boh.outertune.ui.utils.MEDIA_PERMISSION_LEVEL
 import com.dd3boh.outertune.ui.utils.appBarScrollBehavior
-import com.dd3boh.outertune.ui.utils.cacheDirectoryTree
 import com.dd3boh.outertune.ui.utils.imageCache
 import com.dd3boh.outertune.ui.utils.resetHeightOffset
 import com.dd3boh.outertune.utils.ActivityLauncherHelper
@@ -238,7 +236,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.internal.trimSubstring
 import java.net.URLDecoder
 import javax.inject.Inject
 
