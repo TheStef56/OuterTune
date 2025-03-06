@@ -154,11 +154,13 @@ fun AddToPlaylistDialogOnline(
                                                     database.addSongToPlaylist(playlist, ids)
                                                 }
                                                 viewStateMap.clear()
+                                                songsIdx += 1
                                             }
                                             .onFailure {
                                                 reportException(it)
+                                                songsIdx += 1
                                             }
-                                            songsIdx += 1
+
                                             if (songsIdx.toInt() == songsTot.toInt() - 1) {
                                                 onProgressStart(false)
                                             }
@@ -217,11 +219,13 @@ fun AddToPlaylistDialogOnline(
                                                     }
                                                 }
                                                 viewStateMap.clear()
+                                                songsIdx += 1
                                             }
                                             .onFailure {
                                                 reportException(it)
+                                                songsIdx += 1
                                             }
-                                        songsIdx += 1
+
                                         if (songsIdx.toInt() == songsTot.toInt() - 1) {
                                             onProgressStart(false)
                                         }
