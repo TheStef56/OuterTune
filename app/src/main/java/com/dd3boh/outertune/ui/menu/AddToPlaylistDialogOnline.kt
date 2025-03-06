@@ -125,7 +125,7 @@ fun AddToPlaylistDialogOnline(
                             var  songsIdx = 0.toDouble()
                             onProgressStart(true)
                             Timber.tag("SHIT BECAME TRUE").v("yes")
-                            songs.forEach{
+                            songs.reversed().forEach{
                                     song ->
                                 var allArtists = ""
                                 song.artists.forEach {
@@ -188,7 +188,7 @@ fun AddToPlaylistDialogOnline(
                             var  songsIdx = 0.toDouble()
                             onProgressStart(true)
                             Timber.tag("SHIT BECAME TRUE").v("yes")
-                            songs.forEach{
+                            songs.reversed().forEach{
                                     song ->
                                 var allArtists = ""
                                 song.artists.forEach {
