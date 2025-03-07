@@ -142,11 +142,11 @@ fun AddToPlaylistDialogOnline(
                                                     ItemsPage(result.items.distinctBy { it.id }, result.continuation)
                                                 val itemsPage = viewStateMap.entries.first().value!!
                                                 val firstSong = itemsPage.items[0] as SongItem
-                                                val firstSongEnt = firstSong.toMediaMetadata().toSongEntity()
+                                                val firstSongMedia = firstSong.toMediaMetadata()
                                                 val ids = List(1) {firstSong.id}
                                                 withContext(Dispatchers.IO) {
                                                     try {
-                                                        database.insert(firstSongEnt)
+                                                        database.insert(firstSongMedia)
                                                     } catch (e: Exception) {
                                                         Timber.tag("Exception inserting song in database:")
                                                             .e(e.toString())
@@ -205,11 +205,11 @@ fun AddToPlaylistDialogOnline(
                                                     ItemsPage(result.items.distinctBy { it.id }, result.continuation)
                                                 val itemsPage = viewStateMap.entries.first().value!!
                                                 val firstSong = itemsPage.items[0] as SongItem
+                                                val firstSongMedia = firstSong.toMediaMetadata()
                                                 val firstSongEnt = firstSong.toMediaMetadata().toSongEntity()
-                                                firstSongEnt.toggleLike()
                                                 withContext(Dispatchers.IO) {
                                                     try {
-                                                        database.insert(firstSongEnt)
+                                                        database.insert(firstSongMedia)
                                                         database.query {
                                                             update(firstSongEnt.toggleLike())
                                                         }
