@@ -124,7 +124,6 @@ fun AddToPlaylistDialogOnline(
                             val songsTot = songs.count().toDouble()
                             var  songsIdx = 0.toDouble()
                             onProgressStart(true)
-                            Timber.tag("SHIT BECAME TRUE").v("yes")
                             songs.reversed().forEach{
                                     song ->
                                 var allArtists = ""
@@ -187,7 +186,6 @@ fun AddToPlaylistDialogOnline(
                             val songsTot = songs.count().toDouble()
                             var  songsIdx = 0.toDouble()
                             onProgressStart(true)
-                            Timber.tag("SHIT BECAME TRUE").v("yes")
                             songs.reversed().forEach{
                                     song ->
                                 var allArtists = ""
