@@ -8,6 +8,7 @@
 
 package com.dd3boh.outertune.models
 
+import android.util.Log
 import androidx.compose.ui.util.fastFirst
 import androidx.compose.ui.util.fastFirstOrNull
 import androidx.compose.ui.util.fastForEachIndexed
@@ -23,12 +24,17 @@ import com.dd3boh.outertune.playback.PlayerConnection
 import com.dd3boh.outertune.utils.dataStore
 import com.dd3boh.outertune.utils.get
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import okhttp3.internal.toImmutableList
 import timber.log.Timber
+import java.util.PriorityQueue
 import kotlin.math.max
 import kotlin.math.min
 
@@ -64,7 +70,7 @@ data class MultiQueueObject(
     /**
      * Retrieve the current queue in list form, with shuffle state taken in account
      *
-     * @return Queue object (entire object)
+     * @return A copy of the Metadata list
      */
     fun getCurrentQueueShuffled(): MutableList<MediaMetadata> {
         return if (shuffled) {
@@ -89,6 +95,23 @@ data class MultiQueueObject(
             queue[queuePos].shuffleIndex
         } else {
             queuePos
+        }
+    }
+
+    fun setCurrentQueuePos(index: Int) {
+        if (getQueuePosShuffled() != index) {
+
+            /**
+             * queuePos will always track the index of the song in the unsorted queue, *even* if queue is shuffled.
+             * To get the real queuePos of the song, look at the shuffleIndex value that equals the index provided
+             */
+            val newQueuePos = if (shuffled) {
+                queue.indexOf(queue.find { it.shuffleIndex == index })
+            } else {
+                index
+            }
+
+            queuePos = newQueuePos
         }
     }
 
@@ -164,9 +187,7 @@ class QueueBoard(queues: MutableList<MultiQueueObject> = ArrayList()) {
         masterIndex = masterQueues.size - 1
 
         regenerateIndexes()
-        CoroutineScope(Dispatchers.IO).launch {
-            player.database.updateAllQueues(masterQueues)
-        }
+        saveAllQueues(masterQueues, player)
     }
 
     /**
@@ -243,11 +264,6 @@ class QueueBoard(queues: MutableList<MultiQueueObject> = ArrayList()) {
                     match.queuePos = match.queue.indexOf(match.queue.find { it.shuffleIndex == 0 })
                 }
 
-                if (player.dataStore.get(PersistentQueueKey, true)) {
-                    CoroutineScope(Dispatchers.IO).launch {
-                        player.database.updateQueue(match)
-                    }
-                }
                 bubbleUp(match, player)  // move queue to end of list so it shows as most recent
                 return true
             }
@@ -292,12 +308,7 @@ class QueueBoard(queues: MutableList<MultiQueueObject> = ArrayList()) {
                     match.queuePos = match.queue.indexOf(match.queue.find { it.shuffleIndex == 0 })
                 }
 
-                if (player.dataStore.get(PersistentQueueKey, true)) {
-                    CoroutineScope(Dispatchers.IO).launch {
-                        player.database.rewriteQueue(match)
-                    }
-                }
-
+                saveQueueSongs(match, player)
                 bubbleUp(match, player) // move queue to end of list so it shows as most recent
                 return true
             } else if (match.title.endsWith("+\u200B") || anyExts != null) { // this queue is an already an extension queue
@@ -319,11 +330,7 @@ class QueueBoard(queues: MutableList<MultiQueueObject> = ArrayList()) {
                 }
 
                 // rewrite queue
-                if (player.dataStore.get(PersistentQueueKey, true)) {
-                    CoroutineScope(Dispatchers.IO).launch {
-                        player.database.rewriteQueue(anyExts ?: match)
-                    }
-                }
+                saveQueueSongs(anyExts ?: match, player)
 
                 // don't change index
                 bubbleUp(match, player) // move queue to end of list so it shows as most recent
@@ -336,33 +343,29 @@ class QueueBoard(queues: MutableList<MultiQueueObject> = ArrayList()) {
                     deleteQueue(masterQueues.first(), player)
                 }
 
-                mediaList.fastForEachIndexed { index, s ->
-                    s?.shuffleIndex = index
-                }
-
                 // create new queues
-                val shufQueue = ArrayList(match.queue.map { it })
+                val shufQueue = match.getCurrentQueueShuffled()
                 shufQueue.addAll((mediaList.filterNotNull()))
+
+                // queue is always created as un-shuffled
+                shufQueue.fastForEachIndexed { index, s ->
+                    s.shuffleIndex = index
+                }
 
                 val newQueue = MultiQueueObject(
                     QueueEntity.generateQueueId(),
                     "$title +\u200B",
                     shufQueue,
                     false,
-                    match.queuePos,
+                    match.getQueuePosShuffled(),
                     masterQueues.size
                 )
                 masterQueues.add(newQueue)
                 if (shuffled) {
                     shuffle(newQueue, player, false, true)
-                    match.queuePos = match.queue.indexOf(match.queue.find { it.shuffleIndex == 0 })
                 }
 
-                if (player.dataStore.get(PersistentQueueKey, true)) {
-                    CoroutineScope(Dispatchers.IO).launch {
-                        player.database.saveQueue(newQueue)
-                    }
-                }
+                saveQueue(newQueue, player)
 
                 // don't change index, don't move match queue to end
                 masterIndex = masterQueues.size - 1 // track the newly modified queue
@@ -394,11 +397,7 @@ class QueueBoard(queues: MutableList<MultiQueueObject> = ArrayList()) {
                 newQueue.queuePos = newQueue.queue.indexOf(newQueue.queue.find { it.shuffleIndex == 0 })
             }
 
-            if (player.dataStore.get(PersistentQueueKey, true)) {
-                CoroutineScope(Dispatchers.IO).launch {
-                    player.database.saveQueue(newQueue)
-                }
-            }
+            saveQueue(newQueue, player)
             masterIndex = masterQueues.size - 1 // track the newly modified queue
             return true
         }
@@ -445,11 +444,13 @@ class QueueBoard(queues: MutableList<MultiQueueObject> = ArrayList()) {
             pos
         }
 
+        Log.d(TAG, "Inserting at position: $listPos")
+
         // assign new indexes to items affected by inserted items
         if (q.shuffled) {
-            val songsAfter = q.queue.filter { it.shuffleIndex >= listPos }
-            songsAfter.forEachIndexed { index, s ->
-                s.shuffleIndex = listPos + mediaList.size + index
+            val songsAfter = q.getCurrentQueueShuffled()
+            songsAfter.subList(listPos, songsAfter.size - 1).forEach {
+                it.shuffleIndex += mediaList.size
             }
         }
 
@@ -457,7 +458,12 @@ class QueueBoard(queues: MutableList<MultiQueueObject> = ArrayList()) {
         mediaList.fastForEachIndexed { index, s ->
             s.shuffleIndex = listPos + index
         }
-        q.queue.addAll(listPos, mediaList)
+
+        if (q.shuffled) {
+            q.queue.addAll(mediaList)
+        } else {
+            q.queue.addAll(listPos, mediaList)
+        }
 
         // adding before current playing song requires tracking new index
         if (q.getQueuePosShuffled() >= listPos) {
@@ -475,11 +481,10 @@ class QueueBoard(queues: MutableList<MultiQueueObject> = ArrayList()) {
             q.playlistId = mediaList.lastOrNull()?.id
         }
 
-        if (saveToDb && player.dataStore.get(PersistentQueueKey, true)) {
-            CoroutineScope(Dispatchers.IO).launch {
-                player.database.rewriteQueue(q)
-            }
+        if (saveToDb) {
+            saveQueueSongs(q, player)
         }
+
     }
 
     /**
@@ -487,8 +492,14 @@ class QueueBoard(queues: MutableList<MultiQueueObject> = ArrayList()) {
      *
      * @param index Index of item
      */
-    fun removeCurrentQueueSong(index: Int, player: MusicService) =
-        getCurrentQueue()?.let { removeSong(it, index, player) }
+    fun removeCurrentQueueSong(index: Int, player: MusicService): Boolean {
+        val q = getCurrentQueue()
+        if (q == null) {
+            return false
+        }
+        return removeSong(q, index, player)
+    }
+
 
     /**
      * Removes song from the queue
@@ -496,16 +507,42 @@ class QueueBoard(queues: MutableList<MultiQueueObject> = ArrayList()) {
      * @param item Queue
      * @param index Index of item
      */
-    fun removeSong(item: MultiQueueObject, index: Int, player: MusicService) {
+    fun removeSong(item: MultiQueueObject, index: Int, player: MusicService): Boolean {
+        var ret = false
+        val currentMediaItemIndex = player.player.currentMediaItemIndex
+        var newQueuePos = item.getQueuePosShuffled()
+
         if (item.shuffled) {
-            item.queue.find { it.shuffleIndex == index }.let { item.queue.remove(it) }
+            Log.d(TAG, "Trying remove song at index: $index")
+            val s = item.queue.find { it.shuffleIndex == index }
+            if (s != null) {
+                ret = item.queue.remove(s)
+                Log.d(TAG, "Removing song: ${s.title}, $ret")
+            }
         } else {
             item.queue.removeAt(index)
+            ret = true
+        }
+        item.getCurrentQueueShuffled().fastForEachIndexed { index, s -> s.shuffleIndex = index }
+
+        // update current position only if the move will affect it
+        if (index < currentMediaItemIndex) {
+            newQueuePos--
+        } else if (index == currentMediaItemIndex) {
+            newQueuePos++
+        } else {
+            // no need to adjust
         }
 
-        CoroutineScope(Dispatchers.IO).launch {
-            player.database.rewriteQueue(item)
+        if (newQueuePos >= item.getSize()) {
+            newQueuePos = item.getSize() - 1
+        } else if (newQueuePos < 0) {
+            newQueuePos = 0
         }
+        item.queuePos = newQueuePos
+
+        saveQueueSongs(item, player)
+        return ret
     }
 
     /**
@@ -558,9 +595,7 @@ class QueueBoard(queues: MutableList<MultiQueueObject> = ArrayList()) {
             item.shuffled = false
             isShuffleEnabled.value = false
         }
-        CoroutineScope(Dispatchers.IO).launch {
-            player.database.rewriteQueue(item)
-        }
+        saveQueueSongs(item, player)
         bubbleUp(item, player)
         return item.queuePos
     }
@@ -638,10 +673,8 @@ class QueueBoard(queues: MutableList<MultiQueueObject> = ArrayList()) {
         item.shuffled = true
         isShuffleEnabled.value = true
 
-        if (!bypassSaveToDb && player.dataStore.get(PersistentQueueKey, true)) {
-            CoroutineScope(Dispatchers.IO).launch {
-                player.database.rewriteQueue(item)
-            }
+        if (!bypassSaveToDb) {
+            saveQueueSongs(item, player)
         }
         bubbleUp(item, player)
         return item.queuePos
@@ -675,9 +708,7 @@ class QueueBoard(queues: MutableList<MultiQueueObject> = ArrayList()) {
 
         masterQueues.move(fromIndex, toIndex)
         regenerateIndexes()
-        CoroutineScope(Dispatchers.IO).launch {
-            player.database.updateAllQueues(masterQueues)
-        }
+        saveAllQueues(masterQueues, player)
     }
 
 
@@ -699,7 +730,6 @@ class QueueBoard(queues: MutableList<MultiQueueObject> = ArrayList()) {
      * @param queue Queue to operate on
      * @param fromIndex Song to move
      * @param toIndex Destination
-     * @param currentMediaItemIndex Index of now playing song
      *
      * @return New current position tracker
      */
@@ -741,10 +771,9 @@ class QueueBoard(queues: MutableList<MultiQueueObject> = ArrayList()) {
         } else {
             queue.queue.move(fromIndex, toIndex)
         }
+        queue.getCurrentQueueShuffled().fastForEachIndexed { index, s -> s.shuffleIndex = index }
 
-        CoroutineScope(Dispatchers.IO).launch {
-            player.database.rewriteQueue(queue)
-        }
+        saveQueueSongs(queue, player)
 
         if (QUEUE_DEBUG)
             Timber.tag(TAG).d("Moved item from $currentMediaItemIndex to ${queue.queuePos}")
@@ -854,18 +883,25 @@ class QueueBoard(queues: MutableList<MultiQueueObject> = ArrayList()) {
             return null
         }
 
-        val queuePos =
-            item.getQueuePosShuffled() // I have no idea why this value gets reset to 0 by the end... but ig this works
+        // I have no idea why this value gets reset to 0 by the end... but ig this works
+        val queuePos = item.getQueuePosShuffled()
+        val realQueuePos = item.queuePos
         masterIndex = masterQueues.indexOf(item)
 
         val mediaItems: MutableList<MediaMetadata> = item.getCurrentQueueShuffled()
 
+        Log.d(
+            TAG, "Setting current queue. in bounds: ${queuePos >= 0 && queuePos < mediaItems.size}, " +
+                    "queuePos: $queuePos, real queuePos: ${realQueuePos}, ids: ${player.player.currentMetadata?.id}, " +
+                    "${mediaItems[queuePos].id}"
+        )
         /**
          * current playing == jump target, do seamlessly
          */
         val seamlessSupported = (queuePos >= 0 && queuePos < mediaItems.size)
                 && player.player.currentMetadata?.id == mediaItems[queuePos].id
         if (seamlessSupported) {
+            Log.d(TAG, "Trying seamless queue switch. Is first song?: ${queuePos == 0}")
             val playerIndex = player.player.currentMediaItemIndex
 
             if (queuePos == 0) {
@@ -888,6 +924,7 @@ class QueueBoard(queues: MutableList<MultiQueueObject> = ArrayList()) {
                     mediaItems.subList(queuePos + 1, mediaItems.size).map { it.toMediaItem() })
             }
         } else {
+            Log.d(TAG, "Seamless is not supported. Loading songs in directly")
             player.player.setMediaItems(mediaItems.map { it.toMediaItem() })
         }
 
@@ -906,25 +943,107 @@ class QueueBoard(queues: MutableList<MultiQueueObject> = ArrayList()) {
      *
      * @param index
      */
-    fun setCurrQueuePosIndex(index: Int, player: MusicService) {
-        getCurrentQueue()?.let {
-            if (it.queuePos != index) {
+    fun setCurrQueuePosIndex(index: Int) {
+        getCurrentQueue()?.setCurrentQueuePos(index)
+    }
 
-                /**
-                 * queuePos will always track the index of the song in the unsorted queue, *even* if queue is shuffled.
-                 * To get the real queuePos of the song, look at the shuffleIndex value that equals the index provided
-                 */
-                val newQueuePos = if (it.shuffled) {
-                    it.queue.indexOf(it.queue.find { it.shuffleIndex == index })
-                } else {
-                    index
-                }
-                it.queuePos = newQueuePos
-                if (player.dataStore.get(PersistentQueueKey, true)) {
-                    CoroutineScope(Dispatchers.IO).launch {
-                        player.database.updateQueue(it)
+
+    /**
+     * ========================
+     * Database sync management
+     * ========================
+     */
+
+    class PriorityJob(val priority: Int, val job: Job) : Comparable<PriorityJob> {
+        override fun compareTo(other: PriorityJob): Int = other.priority - priority
+    }
+
+    var queueEntity = PriorityQueue<PriorityJob>()
+    var queueSongMap = PriorityQueue<PriorityJob>()
+    var jobActive = Mutex()
+    val coroutineScope = CoroutineScope(Dispatchers.IO)
+
+    /**
+     * Execute the most recent save request, with a 5 second delay from function call
+     */
+    private fun databaseDispatcher() {
+        Log.d(TAG, "Starting database save task")
+        if (jobActive.isLocked) {
+            Log.d(TAG, "Database save task is already acive, aborting")
+            return
+        }
+
+        jobActive.tryLock()
+        while (queueEntity.isNotEmpty() || queueSongMap.isNotEmpty()) {
+            runBlocking {
+                delay(5000L)
+            }
+            Log.d(TAG, "Running database save task")
+
+            // saving songs nukes the queue entity in the process, abut it shouldn't matter since are same queue object
+            if (!queueSongMap.isEmpty()) {
+                queueSongMap.last().job.start()
+                queueSongMap.clear()
+                continue
+            }
+
+            if (!queueEntity.isEmpty()) {
+                queueEntity.last().job.start()
+                queueEntity.clear()
+                continue
+            }
+        }
+        jobActive.unlock()
+        Log.d(TAG, "Exiting database save task")
+    }
+
+    fun shutdown() {
+        queueSongMap.clear()
+        queueEntity.clear()
+    }
+
+    private fun saveQueueSongs(mq: MultiQueueObject, player: MusicService) {
+        if (player.dataStore.get(PersistentQueueKey, true)) {
+            queueSongMap.add(
+                PriorityJob(0,
+                    coroutineScope.launch(start = CoroutineStart.LAZY) {
+                        player.database.rewriteQueue(mq)
                     }
-                }
+                )
+            )
+            CoroutineScope(Dispatchers.IO).launch {
+                databaseDispatcher()
+            }
+        }
+    }
+
+    private fun saveQueue(mq: MultiQueueObject, player: MusicService) {
+        if (player.dataStore.get(PersistentQueueKey, true)) {
+            queueEntity.add(
+                PriorityJob(0,
+                    coroutineScope.launch(start = CoroutineStart.LAZY) {
+                        player.database.updateQueue(mq)
+                    }
+                )
+            )
+            CoroutineScope(Dispatchers.IO).launch {
+                databaseDispatcher()
+            }
+        }
+    }
+
+    private fun saveAllQueues(mq: MutableList<MultiQueueObject>, player: MusicService) {
+        if (player.dataStore.get(PersistentQueueKey, true)) {
+            queueEntity.add(
+                // we select most recent task, therefore "lower" priority works out to be "higher" priority
+                PriorityJob(1,
+                    coroutineScope.launch(start = CoroutineStart.LAZY) {
+                        player.database.updateAllQueues(mq)
+                    }
+                )
+            )
+            CoroutineScope(Dispatchers.IO).launch {
+                databaseDispatcher()
             }
         }
     }
