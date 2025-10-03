@@ -70,6 +70,9 @@ import java.io.IOException
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
+import java.util.Locale
+import kotlin.onFailure
+import kotlin.coroutines.cancellation.CancellationException
 
 class LocalMediaScanner(val context: Context, scannerImpl: ScannerImpl) {
     private val TAG = LocalMediaScanner::class.simpleName.toString()
@@ -1433,7 +1436,7 @@ class LocalMediaScanner(val context: Context, scannerImpl: ScannerImpl) {
                 if (SCANNER_DEBUG)
                     Log.v(TAG, "Remote song: ${foundSong.firstOrNull()?.title} [${foundSong.firstOrNull()?.id}]")
             }.onFailure {
-                throw Exception("Failed to search on YouTube Music: ${it.message}")
+                if (it !is CancellationException) throw Exception("Failed to search on YouTube Music: ${it.message}")
             }
 
             return ytmResult

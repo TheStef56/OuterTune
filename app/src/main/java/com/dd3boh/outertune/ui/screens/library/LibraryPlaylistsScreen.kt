@@ -39,6 +39,7 @@ import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -74,6 +75,7 @@ import com.dd3boh.outertune.constants.PlaylistSortTypeKey
 import com.dd3boh.outertune.constants.PlaylistViewTypeKey
 import com.dd3boh.outertune.constants.ShowLikedAndDownloadedPlaylist
 import com.dd3boh.outertune.db.entities.PlaylistEntity
+import com.dd3boh.outertune.db.entities.Song
 import com.dd3boh.outertune.ui.component.ChipsRow
 import com.dd3boh.outertune.ui.component.EmptyPlaceholder
 import com.dd3boh.outertune.ui.component.LazyColumnScrollbar
@@ -84,7 +86,6 @@ import com.dd3boh.outertune.ui.component.SortHeader
 import com.dd3boh.outertune.ui.component.items.AutoPlaylistGridItem
 import com.dd3boh.outertune.ui.component.items.AutoPlaylistListItem
 import com.dd3boh.outertune.ui.dialog.CreatePlaylistDialog
-import com.dd3boh.outertune.ui.dialog.ImportM3uDialog
 import com.dd3boh.outertune.ui.menu.ActionDropdown
 import com.dd3boh.outertune.ui.menu.DropdownItem
 import com.dd3boh.outertune.ui.utils.MEDIA_PERMISSION_LEVEL
@@ -97,6 +98,7 @@ import com.dd3boh.outertune.viewmodels.LibraryPlaylistsViewModel
 fun LibraryPlaylistsScreen(
     navController: NavController,
     viewModel: LibraryPlaylistsViewModel = hiltViewModel(),
+    replaceSong: MutableState<Song?>,
     libraryFilterContent: @Composable() (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
@@ -127,7 +129,6 @@ fun LibraryPlaylistsScreen(
     val backStackEntry by navController.currentBackStackEntryAsState()
     val scrollToTop = backStackEntry?.savedStateHandle?.getStateFlow("scrollToTop", false)?.collectAsState()
 
-    var showImportM3uDialog by rememberSaveable { mutableStateOf(false) }
     var showCreatePlaylistDialog by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { viewModel.syncPlaylists() }
@@ -253,7 +254,7 @@ fun LibraryPlaylistsScreen(
                         DropdownItem(
                             title = stringResource(R.string.import_playlist),
                             leadingIcon = { Icon(Icons.AutoMirrored.Rounded.Input, null) },
-                            action = { showImportM3uDialog = true }
+                            action = { navController.navigate("importM3u") }
                         ),
                     ),
                 )
@@ -448,13 +449,6 @@ fun LibraryPlaylistsScreen(
         /**
          * Dialog
          */
-
-        if (showImportM3uDialog) {
-            ImportM3uDialog(
-                navController = navController,
-                onDismiss = { showImportM3uDialog = false }
-            )
-        }
 
         Indicator(
             isRefreshing = isSyncingRemotePlaylists,

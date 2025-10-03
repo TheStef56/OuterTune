@@ -274,7 +274,7 @@ fun YouTubeSongMenu(
                 }
 
                 coroutineScope.launch(syncCoroutine) {
-                    playlist.playlist.browseId?.let { browseId ->
+                    playlist!!.playlist.browseId?.let { browseId ->
                         YouTube.addToPlaylist(browseId, song.id)
                     }
                 }
