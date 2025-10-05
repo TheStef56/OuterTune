@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -31,12 +30,10 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Input
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.GraphicEq
-import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -54,7 +51,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -73,7 +69,6 @@ import com.dd3boh.outertune.db.entities.ArtistEntity
 import com.dd3boh.outertune.db.entities.Song
 import com.dd3boh.outertune.db.entities.SongEntity
 import com.dd3boh.outertune.models.toMediaMetadata
-import com.dd3boh.outertune.playback.SleepTimer
 import com.dd3boh.outertune.ui.component.EnumListPreference
 import com.dd3boh.outertune.ui.component.LazyColumnScrollbar
 import com.dd3boh.outertune.utils.lmScannerCoroutine
@@ -82,17 +77,13 @@ import com.dd3boh.outertune.utils.scanners.LocalMediaScanner
 import com.dd3boh.outertune.utils.scanners.LocalMediaScanner.Companion.compareM3uSong
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import okhttp3.Dispatcher
 import java.io.InputStream
-import kotlin.coroutines.coroutineContext
 
 fun clampText(string: String, maxLength: Int): String {
-    return if (string.length > maxLength) {
+    return if (string.length > maxLength && !string.contains("EXTINF")) {
         string.take(maxLength) + "..."
     } else {
         string
@@ -174,11 +165,11 @@ fun DropDownResults(
                         }
                     }
                 }
+                Spacer(Modifier.width(8.dp))
                 LazyColumnScrollbar(
                     state = state,
                     modifier = Modifier
                         .heightIn(max = 150.dp)
-                        .offset(x = 10.dp)
                 )
             }
         }
@@ -289,18 +280,16 @@ fun ImportM3uDialog(
                     .padding(vertical = 8.dp)
             ) {
                 if (isLoading) {
-                    Text(
-                        text = "$percentage%",
-                        fontSize = 16.sp,
-                        modifier = Modifier.
-                            offset(x = -5.dp)
-
-                    )
-                    CircularProgressIndicator(
-                        strokeWidth = 2.dp,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(Modifier.width(8.dp))
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(80.dp)) {
+                        Text(
+                            text = "$percentage%",
+                            fontSize = 14.sp,
+                        )
+                        CircularProgressIndicator(
+                            strokeWidth = 3.dp,
+                            modifier = Modifier.size(40.dp)
+                        )
+                    }
                 }
 
                 Button(
@@ -523,6 +512,7 @@ suspend fun loadM3u(
                 unorderedRejectedSongs.sortBy { it.first }
                 songs = unorderedSongs.map { (_, query, song) -> Pair(query, song)} as ArrayList<Pair<String, Song>>
                 rejectedSongs = unorderedRejectedSongs.map { (_, rawLine) -> rawLine} as ArrayList<String>
+                onPercentageChange(0)
             }
         }
     }.onFailure {
