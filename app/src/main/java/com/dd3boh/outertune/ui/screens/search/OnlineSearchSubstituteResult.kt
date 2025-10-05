@@ -112,7 +112,9 @@ fun OnlineSearchSubstituteResult(
                                         )
                                     }
                                 )
-                                navController.popBackStack()
+                                while (navController.currentBackStackEntry?.destination?.route?.startsWith("search_sub") == true) {
+                                    navController.popBackStack()
+                                }
                             }
                         ) {
                             Icon(

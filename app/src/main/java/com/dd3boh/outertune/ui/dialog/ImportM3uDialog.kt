@@ -538,5 +538,3 @@ suspend fun loadM3u(
 fun InputStream.readLines(): List<String> {
     return this.bufferedReader().useLines { it.toList() }
 }
-
-// TODO: add search bar on substitute song

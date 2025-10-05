@@ -656,15 +656,34 @@ class MainActivity : ComponentActivity() {
                     val (query, onQueryChange) = rememberSaveable(stateSaver = TextFieldValue.Saver) {
                         mutableStateOf(TextFieldValue())
                     }
+                    val (querySub, onQuerySubChange) = rememberSaveable(stateSaver = TextFieldValue.Saver) {
+                        mutableStateOf(TextFieldValue())
+                    }
+
                     var searchActive by rememberSaveable {
                         mutableStateOf(false)
                     }
+
+                    var searchSubActive by rememberSaveable {
+                        mutableStateOf(false)
+                    }
+
                     val onSearchActiveChange: (Boolean) -> Unit = { newActive ->
                         searchActive = newActive
                         if (!newActive) {
                             focusManager.clearFocus()
                             if (navigationItems.fastAny { it.route == navBackStackEntry?.destination?.route }) {
                                 onQueryChange(TextFieldValue())
+                            }
+                        }
+                    }
+
+                    val onSubSearchActiveChange: (Boolean) -> Unit = { newActive ->
+                        searchSubActive = newActive
+                        if (!newActive) {
+                            focusManager.clearFocus()
+                            if (navigationItems.fastAny { it.route == navBackStackEntry?.destination?.route }) {
+                                onQuerySubChange(TextFieldValue())
                             }
                         }
                     }
@@ -679,13 +698,19 @@ class MainActivity : ComponentActivity() {
                                 // don't do anything
                             } else {
                                 navController.navigate("search/${it.urlEncode()}")
-                                Log.v("AO", "search/${it.urlEncode()}")
                                 if (dataStore[PauseSearchHistoryKey] != true) {
                                     database.query {
                                         insert(SearchHistory(query = it))
                                     }
                                 }
                             }
+                        }
+                    }
+
+                    val onSearchSub: (String) -> Unit = {
+                        if (it.isNotEmpty()) {
+                            onSubSearchActiveChange(false)
+                            navController.navigate("search_sub/${it.urlEncode()}")
                         }
                     }
 
@@ -1017,7 +1042,69 @@ class MainActivity : ComponentActivity() {
                                             },
                                         )
                                     ) {
-                                        OnlineSearchSubstituteResult(navController, substituteSong)
+                                        Box(modifier = Modifier.fillMaxSize()) {
+                                            OnlineSearchSubstituteResult(
+                                                navController,
+                                                substituteSong
+                                            )
+                                            SearchBar(
+                                                query = querySub,
+                                                onQueryChange = onQuerySubChange,
+                                                onSearch = onSearchSub,
+                                                active = searchSubActive,
+                                                onActiveChange = onSubSearchActiveChange,
+                                                scrollBehavior = searchBarScrollBehavior,
+                                                placeholder = {
+                                                    Text(
+                                                        text = stringResource(
+                                                            if (!searchActive) R.string.search
+                                                            else {
+                                                                R.string.search_yt_music
+                                                            }
+                                                        )
+                                                    )
+                                                },
+                                                leadingIcon = {
+                                                    IconButton(
+                                                        onClick = {
+                                                            when {
+                                                                searchSubActive -> onSubSearchActiveChange(
+                                                                    false
+                                                                )
+
+                                                                !searchSubActive -> {
+                                                                    navController.navigateUp()
+                                                                }
+
+                                                                else -> onSubSearchActiveChange(true)
+                                                            }
+                                                        },
+                                                    ) {
+                                                        Icon(
+                                                            imageVector =
+                                                                if (searchSubActive) {
+                                                                    Icons.AutoMirrored.Rounded.ArrowBack
+                                                                } else {
+                                                                    Icons.Rounded.Search
+                                                                },
+                                                            contentDescription = null
+                                                        )
+                                                    }
+                                                },
+                                                trailingIcon = {},
+                                                focusRequester = searchBarFocusRequester,
+                                                modifier = Modifier
+                                                    .align(Alignment.TopCenter)
+                                                    .windowInsetsPadding(
+                                                        if (shouldShowNavigationRail) {
+                                                            WindowInsets(left = NavigationBarHeight)
+                                                        } else {
+                                                            // please shield your eyes.
+                                                            WindowInsets(0.dp)
+                                                        }
+                                                    )
+                                            ) {}
+                                        }
                                     }
                                     composable(
                                         route = "album/{albumId}",
@@ -1656,3 +1743,7 @@ val LocalDownloadUtil = staticCompositionLocalOf<DownloadUtil> { error("No Downl
 val LocalSyncUtils = staticCompositionLocalOf<SyncUtils> { error("No SyncUtils provided") }
 val LocalNetworkConnected = staticCompositionLocalOf<Boolean> { error("No Network Status provided") }
 val LocalSnackbarHostState = staticCompositionLocalOf<SnackbarHostState> { error("No SnackbarHostState provided") }
+
+
+// TODO: make query display on first query
+// TODO: add toast notifications
