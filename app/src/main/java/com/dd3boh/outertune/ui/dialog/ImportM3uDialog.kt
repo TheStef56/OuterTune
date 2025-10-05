@@ -412,13 +412,13 @@ suspend fun loadM3u(
     searchOnline: Boolean = false,
     onPercentageChange: (Int) -> Unit
 ): Triple<ArrayList<Pair<String, Song>>, ArrayList<String>, String> {
-    val unorderedSongs = ArrayList<Triple<Integer, String, Song>>()
-    val unorderedRejectedSongs = ArrayList<Pair<Integer, String>>()
+    val unorderedSongs = ArrayList<Triple<Int, String, Song>>()
+    val unorderedRejectedSongs = ArrayList<Pair<Int, String>>()
 
     val scope = CoroutineScope(Dispatchers.Main)
 
-    val songs = ArrayList<Pair<String, Song>>()
-    val rejectedSongs = ArrayList<String>()
+    var songs = ArrayList<Pair<String, Song>>()
+    var rejectedSongs = ArrayList<String>()
     var toProcess = 0
     var processed = 0
 
@@ -484,13 +484,13 @@ suspend fun loadM3u(
                                     matches.add(result)
                                 }
                             }
-                            val oldSize = songs.size
+                            val oldSize = unorderedSongs.size
                             var foundOne =
                                 false // TODO: Eventually the user can pick from matches... eventually...
 
                             // take first song when searching on YTM
                             if (matchStrength == ScannerM3uMatchCriteria.LEVEL_0 && searchOnline && matches.isNotEmpty()) {
-                                songs.add(Pair(query, matches.first()))
+                                unorderedSongs.add(Triple(index,query, matches.first()))
                             } else {
                                 for (s in matches) {
                                     if (compareM3uSong(
@@ -506,8 +506,8 @@ suspend fun loadM3u(
                                 }
                             }
 
-                            if (oldSize == songs.size) {
-                                rejectedSongs.add(rawLine)
+                            if (oldSize == unorderedSongs.size) {
+                                unorderedRejectedSongs.add(Pair(index, rawLine))
                             }
                             processed += 1
                             val percent =
@@ -519,6 +519,10 @@ suspend fun loadM3u(
                 while (processed < toProcess) {
                     delay(10)
                 }
+                unorderedSongs.sortBy { it.first }
+                unorderedRejectedSongs.sortBy { it.first }
+                songs = unorderedSongs.map { (_, query, song) -> Pair(query, song)} as ArrayList<Pair<String, Song>>
+                rejectedSongs = unorderedRejectedSongs.map { (_, rawLine) -> rawLine} as ArrayList<String>
             }
         }
     }.onFailure {
