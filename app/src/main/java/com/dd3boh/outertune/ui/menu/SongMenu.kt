@@ -382,7 +382,7 @@ fun SongMenu(
             navController = navController,
             songIds = listOf(song.id),
             onPreAdd = { playlist ->
-                playlist.playlist.browseId?.let { browseId ->
+                playlist!!.playlist.browseId?.let { browseId ->
                     YouTube.addToPlaylist(browseId, song.id)
                 }
                 listOf(song.id)

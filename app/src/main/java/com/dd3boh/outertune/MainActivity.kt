@@ -1051,69 +1051,67 @@ class MainActivity : ComponentActivity() {
                                             },
                                         )
                                     ) {
-                                        Box(modifier = Modifier.fillMaxSize()) {
-                                            OnlineSearchSubstituteResult(
-                                                navController,
-                                                substituteSong
-                                            )
-                                            SearchBar(
-                                                query = querySub,
-                                                onQueryChange = onQuerySubChange,
-                                                onSearch = onSearchSub,
-                                                active = searchSubActive,
-                                                onActiveChange = onSubSearchActiveChange,
-                                                scrollBehavior = searchBarScrollBehavior,
-                                                placeholder = {
-                                                    Text(
-                                                        text = stringResource(
-                                                            if (!searchActive) R.string.search
-                                                            else {
-                                                                R.string.search_yt_music
-                                                            }
-                                                        )
-                                                    )
-                                                },
-                                                leadingIcon = {
-                                                    IconButton(
-                                                        onClick = {
-                                                            when {
-                                                                searchSubActive -> onSubSearchActiveChange(
-                                                                    false
-                                                                )
-
-                                                                !searchSubActive -> {
-                                                                    navController.navigateUp()
-                                                                }
-
-                                                                else -> onSubSearchActiveChange(true)
-                                                            }
-                                                        },
-                                                    ) {
-                                                        Icon(
-                                                            imageVector =
-                                                                if (searchSubActive) {
-                                                                    Icons.AutoMirrored.Rounded.ArrowBack
-                                                                } else {
-                                                                    Icons.Rounded.Search
-                                                                },
-                                                            contentDescription = null
-                                                        )
-                                                    }
-                                                },
-                                                trailingIcon = {},
-                                                focusRequester = searchBarFocusRequester,
-                                                modifier = Modifier
-                                                    .align(Alignment.TopCenter)
-                                                    .windowInsetsPadding(
-                                                        if (shouldShowNavigationRail) {
-                                                            WindowInsets(left = NavigationBarHeight)
-                                                        } else {
-                                                            // please shield your eyes.
-                                                            WindowInsets(0.dp)
+                                        OnlineSearchSubstituteResult(
+                                            navController,
+                                            substituteSong
+                                        )
+                                        SearchBar(
+                                            query = querySub,
+                                            onQueryChange = onQuerySubChange,
+                                            onSearch = onSearchSub,
+                                            active = searchSubActive,
+                                            onActiveChange = onSubSearchActiveChange,
+                                            scrollBehavior = searchBarScrollBehavior,
+                                            placeholder = {
+                                                Text(
+                                                    text = stringResource(
+                                                        if (!searchActive) R.string.search
+                                                        else {
+                                                            R.string.search_yt_music
                                                         }
                                                     )
-                                            ) {}
-                                        }
+                                                )
+                                            },
+                                            leadingIcon = {
+                                                IconButton(
+                                                    onClick = {
+                                                        when {
+                                                            searchSubActive -> onSubSearchActiveChange(
+                                                                false
+                                                            )
+
+                                                            !searchSubActive -> {
+                                                                navController.navigateUp()
+                                                            }
+
+                                                            else -> onSubSearchActiveChange(true)
+                                                        }
+                                                    },
+                                                ) {
+                                                    Icon(
+                                                        imageVector =
+                                                            if (searchSubActive) {
+                                                                Icons.AutoMirrored.Rounded.ArrowBack
+                                                            } else {
+                                                                Icons.Rounded.Search
+                                                            },
+                                                        contentDescription = null
+                                                    )
+                                                }
+                                            },
+                                            trailingIcon = {},
+                                            focusRequester = searchBarFocusRequester,
+                                            modifier = Modifier
+                                                .align(Alignment.TopCenter)
+                                                .windowInsetsPadding(
+                                                    if (shouldShowNavigationRail) {
+                                                        WindowInsets(left = NavigationBarHeight)
+                                                    } else {
+                                                        // please shield your eyes.
+                                                        WindowInsets(0.dp)
+                                                    }
+                                                )
+                                        ) {}
                                     }
                                     composable(
                                         route = "album/{albumId}",

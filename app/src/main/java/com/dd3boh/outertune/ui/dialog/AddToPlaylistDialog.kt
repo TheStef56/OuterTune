@@ -1,5 +1,6 @@
 package com.dd3boh.outertune.ui.dialog
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding
@@ -9,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CheckBox
 import androidx.compose.material.icons.rounded.CheckBoxOutlineBlank
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.IndeterminateCheckBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -27,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
@@ -41,14 +44,22 @@ import com.dd3boh.outertune.constants.PlaylistSortTypeKey
 import com.dd3boh.outertune.constants.SyncMode
 import com.dd3boh.outertune.constants.YtmSyncModeKey
 import com.dd3boh.outertune.db.entities.Playlist
+import com.dd3boh.outertune.db.entities.PlaylistEntity
+import com.dd3boh.outertune.extensions.toMediaItem
+import com.dd3boh.outertune.models.toMediaMetadata
+import com.dd3boh.outertune.playback.SleepTimer
 import com.dd3boh.outertune.ui.component.SortHeader
+import com.dd3boh.outertune.ui.component.items.Icon
 import com.dd3boh.outertune.ui.component.items.ListItem
 import com.dd3boh.outertune.ui.component.items.PlaylistListItem
 import com.dd3boh.outertune.utils.rememberEnumPreference
 import com.dd3boh.outertune.utils.rememberPreference
 import com.zionhuang.innertube.YouTube
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 
 @Composable
@@ -57,7 +68,7 @@ fun AddToPlaylistDialog(
     allowSyncing: Boolean = true,
     initialTextFieldValue: String? = null,
     songIds: List<String>?, // song ids to insert.
-    onPreAdd: (suspend (Playlist) -> List<String>)? = null,
+    onPreAdd: (suspend (Playlist?) -> List<String>)? = null,
     onDismiss: () -> Unit,
 ) {
     val database = LocalDatabase.current
@@ -152,6 +163,37 @@ fun AddToPlaylistDialog(
                 },
                 modifier = Modifier
                     .padding(horizontal = 16.dp)
+            )
+        }
+
+        item {
+            ListItem(
+                title = stringResource(R.string.liked_songs),
+                thumbnailContent = {
+                    Image(
+                        imageVector = Icons.Rounded.Favorite,
+                        contentDescription = null,
+                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onBackground),
+                        modifier = Modifier.size(ListThumbnailSize)
+                    )
+                },
+                modifier = Modifier.clickable {
+                    coroutineScope.launch (Dispatchers.IO) {
+                        if (onPreAdd != null) {
+                            onPreAdd(null)
+                        }
+                        songIds?.reversed()?.forEach { id ->
+                            val song = database.song(id).firstOrNull()
+                            val songEntity = song?.toMediaMetadata()?.toSongEntity()
+                            if (songEntity != null && !songEntity.liked) {
+                                database.query {
+                                    update(songEntity.toggleLike())
+                                }
+                            }
+                        }
+                        onDismiss()
+                    }
+                }
             )
         }
 

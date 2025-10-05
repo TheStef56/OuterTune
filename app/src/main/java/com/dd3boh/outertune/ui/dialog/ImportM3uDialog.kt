@@ -494,7 +494,7 @@ suspend fun loadM3u(
                                             matchStrength = matchStrength
                                         )
                                     ) {
-                                        songs.add(Pair("", s))
+                                        unorderedSongs.add(Triple(index, "", s))
                                         foundOne = true
                                         break
                                     }

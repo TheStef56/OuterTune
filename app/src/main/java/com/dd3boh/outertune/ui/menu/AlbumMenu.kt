@@ -307,7 +307,7 @@ fun AlbumMenu(
             navController = navController,
             songIds = songs.map { it.id },
             onPreAdd = { playlist ->
-                playlist.playlist.browseId?.let { playlistId ->
+                playlist!!.playlist.browseId?.let { playlistId ->
                     album.album.playlistId?.let { addPlaylistId ->
                         YouTube.addPlaylistToPlaylist(playlistId, addPlaylistId)
                     }
