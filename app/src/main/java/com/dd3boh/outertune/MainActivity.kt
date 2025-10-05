@@ -822,6 +822,15 @@ class MainActivity : ComponentActivity() {
                             onQueryChange(TextFieldValue())
                         }
 
+                        if (navBackStackEntry?.destination?.route?.startsWith("search_sub/") == true) {
+                            val searchQuery = withContext(Dispatchers.IO) {
+                                navBackStackEntry?.arguments?.getString("query")!!
+                            }
+                            onQuerySubChange(TextFieldValue(searchQuery, TextRange(searchQuery.length)))
+                        } else if (navigationItems.fastAny { it.route == navBackStackEntry?.destination?.route }) {
+                            onQuerySubChange(TextFieldValue())
+                        }
+
                         if (navigationItems.fastAny { it.route == navBackStackEntry?.destination?.route })
                             if (navigationItems.fastAny { it.route == previousTab })
                                 searchBarScrollBehavior.state.resetHeightOffset()
@@ -1743,7 +1752,3 @@ val LocalDownloadUtil = staticCompositionLocalOf<DownloadUtil> { error("No Downl
 val LocalSyncUtils = staticCompositionLocalOf<SyncUtils> { error("No SyncUtils provided") }
 val LocalNetworkConnected = staticCompositionLocalOf<Boolean> { error("No Network Status provided") }
 val LocalSnackbarHostState = staticCompositionLocalOf<SnackbarHostState> { error("No SnackbarHostState provided") }
-
-
-// TODO: make query display on first query
-// TODO: add toast notifications

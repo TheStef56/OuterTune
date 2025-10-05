@@ -96,11 +96,9 @@ fun DropDownResults(
     items: List<String>,
     state: LazyListState,
     songs: List<Pair<String, Song>>,
-    searchId: MutableState<Pair<Boolean, Int>?>?
+    searchId: MutableState<Pair<Boolean, Int>?>?,
+    expanded: MutableState<Boolean>
 ) {
-    var expanded by remember { mutableStateOf(false) }
-
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -110,7 +108,7 @@ fun DropDownResults(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { expanded = !expanded }
+                .clickable { expanded.value = !expanded.value }
                 .padding(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -120,13 +118,13 @@ fun DropDownResults(
                 modifier = Modifier.weight(1f)
             )
             Icon(
-                imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                imageVector = if (expanded.value) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                 contentDescription = null
             )
         }
 
         // Expandable content
-        if (expanded) {
+        if (expanded.value) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -199,6 +197,16 @@ fun ImportM3uDialog(
     val importedSongs = rememberSaveable { mutableStateListOf<Pair<String, Song>>() }
     val rejectedSongs = rememberSaveable { mutableStateListOf<String>() }
     val searchId = rememberSaveable { mutableStateOf <Pair<Boolean, Int>?> (Pair(false, 0)) }
+
+    val importedListState = rememberSaveable ( saver = LazyListState.Saver ) {
+        LazyListState()
+    }
+
+    val rejectedListState = rememberSaveable ( saver = LazyListState.Saver ) {
+        LazyListState()
+    }
+
+    val expanded = rememberSaveable { mutableStateOf(false) }
 
     var percentage by remember { mutableIntStateOf(0) }
 
@@ -305,26 +313,24 @@ fun ImportM3uDialog(
             }
 
             if (importedSongs.isNotEmpty()) {
-                val importedListState = rememberLazyListState()
-
                 DropDownResults(
                     title = "${stringResource(R.string.import_success_songs)} (${importedSongs.size})",
                     items = importedSongs.map { (_, song) -> song.title },
                     state = importedListState,
                     songs = importedSongs,
-                    searchId = searchId
+                    searchId = searchId,
+                    expanded = expanded
                 )
             }
 
             if (rejectedSongs.isNotEmpty()) {
-                val rejectedListState = rememberLazyListState()
-
                 DropDownResults(
                     title = "${stringResource(R.string.import_failed_songs)} (${rejectedSongs.size})",
                     items = rejectedSongs,
                     state = rejectedListState,
                     songs = emptyList<Pair<String, Song>>(),
-                    searchId = null
+                    searchId = null,
+                    expanded = expanded
                 )
             }
             if (searchId.value != null && searchId.value!!.first) {
@@ -334,6 +340,7 @@ fun ImportM3uDialog(
             }
             if (substituteSong.value != null && searchId.value != null) {
                 val prevSongQuery = importedSongs[searchId.value!!.second].first
+                Toast.makeText(context, "'${importedSongs[searchId.value!!.second].second.title}' replaced with '${substituteSong.value!!.title}'", Toast.LENGTH_SHORT).show()
                 importedSongs[searchId.value!!.second] = Pair(prevSongQuery, substituteSong.value) as Pair<String, Song>
                 substituteSong.value = null
             }
@@ -420,7 +427,6 @@ suspend fun loadM3u(
                 lines.forEachIndexed { index, rawLine ->
                     scope.launch {
                         if (rawLine.startsWith("#EXTINF:")) {
-                            // maybe later write this to be more efficient
                             val artists =
                                 rawLine.substringAfter("#EXTINF:").substringAfter(',')
                                     .substringBefore(" - ").split(';')
