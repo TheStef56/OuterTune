@@ -10,7 +10,6 @@ package com.dd3boh.outertune.ui.dialog
 
 import android.content.Context
 import android.net.Uri
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -22,6 +21,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -34,7 +34,9 @@ import androidx.compose.material.icons.automirrored.rounded.Input
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.GraphicEq
+import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -48,9 +50,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -138,7 +142,7 @@ fun DropDownResults(
                 ) {
                     itemsIndexed(
                         items = items,
-                        key = { _, song -> song.hashCode() }
+                        key = { index, _ -> index }
                     ) { index, item ->
                         Row (
                             modifier = Modifier
@@ -153,12 +157,11 @@ fun DropDownResults(
                             )
                             if (songs.isNotEmpty()){
                                 Icon(
-                                    imageVector = Icons.Default.Edit,
+                                    imageVector = Icons.Rounded.Edit,
                                     contentDescription = null,
                                     modifier = Modifier
                                         .clickable {
                                             searchId!!.value = Pair(true, index)
-                                            Log.v("SEARCHID", "${searchId.value?.first} ${searchId.value?.second}")
                                         }
                                 )
                             }
@@ -169,6 +172,7 @@ fun DropDownResults(
                     state = state,
                     modifier = Modifier
                         .heightIn(max = 150.dp)
+                        .offset(x = 10.dp)
                 )
             }
         }
@@ -199,6 +203,7 @@ fun ImportM3uDialog(
     val rejectedSongs = rememberSaveable { mutableStateListOf<String>() }
     val searchId = rememberSaveable { mutableStateOf <Pair<Boolean, Int>?> (Pair(false, 0)) }
 
+    var percentage by remember { mutableIntStateOf(0) }
 
     val importM3uLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         CoroutineScope(lmScannerCoroutine).launch {
@@ -211,7 +216,10 @@ fun ImportM3uDialog(
                         snackbarHostState = snackbarHostState,
                         uri = uri,
                         matchStrength = scannerSensitivity,
-                        searchOnline = remoteLookup
+                        searchOnline = remoteLookup,
+                        onPercentageChange = { newVal ->
+                            percentage = newVal
+                        }
                     )
                     importedSongs.clear()
                     importedSongs.addAll(result.first)
@@ -275,6 +283,9 @@ fun ImportM3uDialog(
                     .padding(vertical = 8.dp)
             ) {
                 if (isLoading) {
+                    Text(
+                        text = "$percentage%"
+                    )
                     CircularProgressIndicator(
                         strokeWidth = 2.dp,
                         modifier = Modifier.size(24.dp)
@@ -298,7 +309,7 @@ fun ImportM3uDialog(
                 val importedListState = rememberLazyListState()
 
                 DropDownResults(
-                    title = stringResource(R.string.import_success_songs),
+                    title = "${stringResource(R.string.import_success_songs)} (${importedSongs.size})",
                     items = importedSongs.map { (_, song) -> song.title },
                     state = importedListState,
                     songs = importedSongs,
@@ -310,7 +321,7 @@ fun ImportM3uDialog(
                 val rejectedListState = rememberLazyListState()
 
                 DropDownResults(
-                    title = stringResource(R.string.import_failed_songs),
+                    title = "${stringResource(R.string.import_failed_songs)} (${rejectedSongs.size})",
                     items = rejectedSongs,
                     state = rejectedListState,
                     songs = emptyList<Pair<String, Song>>(),
@@ -388,16 +399,22 @@ suspend fun loadM3u(
     snackbarHostState: SnackbarHostState,
     uri: Uri,
     matchStrength: ScannerM3uMatchCriteria = ScannerM3uMatchCriteria.LEVEL_1,
-    searchOnline: Boolean = false
+    searchOnline: Boolean = false,
+    onPercentageChange: (Int) -> Unit
 ): Triple<ArrayList<Pair<String, Song>>, ArrayList<String>, String> {
+    val unorderedSongs = ArrayList<Triple<Integer, String, Song>>()
+    val unorderedRejectedSongs = ArrayList<Pair<Integer, String>>()
     val songs = ArrayList<Pair<String, Song>>()
     val rejectedSongs = ArrayList<String>()
+    var toProcess = 0
+    var processed = 0
 
     runCatching {
         context.applicationContext.contentResolver.openInputStream(uri)?.use { stream ->
             val lines = stream.readLines()
             if (lines.isEmpty()) return@runCatching
             if (lines.first().startsWith("#EXTM3U")) {
+                toProcess = lines.size/2
                 lines.forEachIndexed { index, rawLine ->
                     if (rawLine.startsWith("#EXTINF:")) {
                         // maybe later write this to be more efficient
@@ -467,6 +484,9 @@ suspend fun loadM3u(
                         if (oldSize == songs.size) {
                             rejectedSongs.add(rawLine)
                         }
+                        processed += 1
+                        val percent = if (toProcess > 0) ((processed.toFloat() / toProcess) * 100).toInt() else 0
+                        onPercentageChange(percent)
                     }
                 }
             }
@@ -495,6 +515,6 @@ fun InputStream.readLines(): List<String> {
     return this.bufferedReader().useLines { it.toList() }
 }
 
-// TODO: add percentage on importing
 // TODO: make importing multithreaded (coroutines) for faster import
+// TODO: add percentage on importing
 // TODO: add search bar on substitute song

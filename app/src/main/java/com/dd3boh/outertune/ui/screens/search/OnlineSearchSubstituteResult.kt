@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.runtime.Composable
@@ -115,7 +116,7 @@ fun OnlineSearchSubstituteResult(
                             }
                         ) {
                             Icon(
-                                Icons.Rounded.Check,
+                                Icons.Rounded.SwapHoriz,
                                 contentDescription = null
                             )
                         }
