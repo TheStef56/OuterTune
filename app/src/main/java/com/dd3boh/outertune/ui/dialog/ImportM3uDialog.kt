@@ -73,6 +73,7 @@ import com.dd3boh.outertune.db.entities.ArtistEntity
 import com.dd3boh.outertune.db.entities.Song
 import com.dd3boh.outertune.db.entities.SongEntity
 import com.dd3boh.outertune.models.toMediaMetadata
+import com.dd3boh.outertune.playback.SleepTimer
 import com.dd3boh.outertune.ui.component.EnumListPreference
 import com.dd3boh.outertune.ui.component.LazyColumnScrollbar
 import com.dd3boh.outertune.utils.lmScannerCoroutine
@@ -81,9 +82,14 @@ import com.dd3boh.outertune.utils.scanners.LocalMediaScanner
 import com.dd3boh.outertune.utils.scanners.LocalMediaScanner.Companion.compareM3uSong
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.Dispatcher
 import java.io.InputStream
+import kotlin.coroutines.coroutineContext
 
 fun clampText(string: String, maxLength: Int): String {
     return if (string.length > maxLength) {
@@ -189,16 +195,16 @@ fun ImportM3uDialog(
     val database = LocalDatabase.current
     val snackbarHostState = LocalSnackbarHostState.current
 
-    var scannerSensitivity by remember {
+    var scannerSensitivity by rememberSaveable {
         mutableStateOf(ScannerM3uMatchCriteria.LEVEL_1)
     }
 
-    var remoteLookup by remember { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(false) }
+    var remoteLookup by rememberSaveable { mutableStateOf(false) }
+    var isLoading by rememberSaveable { mutableStateOf(false) }
     var showChoosePlaylistDialog by rememberSaveable {
         mutableStateOf(false)
     }
-    var importedTitle by remember { mutableStateOf("") }
+    var importedTitle by rememberSaveable { mutableStateOf("") }
     val importedSongs = rememberSaveable { mutableStateListOf<Pair<String, Song>>() }
     val rejectedSongs = rememberSaveable { mutableStateListOf<String>() }
     val searchId = rememberSaveable { mutableStateOf <Pair<Boolean, Int>?> (Pair(false, 0)) }
@@ -284,7 +290,11 @@ fun ImportM3uDialog(
             ) {
                 if (isLoading) {
                     Text(
-                        text = "$percentage%"
+                        text = "$percentage%",
+                        fontSize = 16.sp,
+                        modifier = Modifier.
+                            offset(x = -5.dp)
+
                     )
                     CircularProgressIndicator(
                         strokeWidth = 2.dp,
@@ -404,6 +414,9 @@ suspend fun loadM3u(
 ): Triple<ArrayList<Pair<String, Song>>, ArrayList<String>, String> {
     val unorderedSongs = ArrayList<Triple<Integer, String, Song>>()
     val unorderedRejectedSongs = ArrayList<Pair<Integer, String>>()
+
+    val scope = CoroutineScope(Dispatchers.Main)
+
     val songs = ArrayList<Pair<String, Song>>()
     val rejectedSongs = ArrayList<String>()
     var toProcess = 0
@@ -416,78 +429,95 @@ suspend fun loadM3u(
             if (lines.first().startsWith("#EXTM3U")) {
                 toProcess = lines.size/2
                 lines.forEachIndexed { index, rawLine ->
-                    if (rawLine.startsWith("#EXTINF:")) {
-                        // maybe later write this to be more efficient
-                        val artists =
-                            rawLine.substringAfter("#EXTINF:").substringAfter(',').substringBefore(" - ").split(';')
-                        val title = rawLine.substringAfter("#EXTINF:").substringAfter(',').substringAfter(" - ")
-                        val source = if (index + 1 < lines.size) lines[index + 1] else null
+                    scope.launch {
+                        if (rawLine.startsWith("#EXTINF:")) {
+                            // maybe later write this to be more efficient
+                            val artists =
+                                rawLine.substringAfter("#EXTINF:").substringAfter(',')
+                                    .substringBefore(" - ").split(';')
+                            val title = rawLine.substringAfter("#EXTINF:").substringAfter(',')
+                                .substringAfter(" - ")
+                            val source = if (index + 1 < lines.size) lines[index + 1] else null
 
-                        val mockSong = Song(
-                            song = SongEntity(
-                                id = "",
-                                title = title,
-                                isLocal = true,
-                                localPath = if (source?.startsWith("http") == false) source.substringAfter(',') else null
-                            ),
-                            artists = artists.map { ArtistEntity("", it) },
-                        )
+                            val mockSong = Song(
+                                song = SongEntity(
+                                    id = "",
+                                    title = title,
+                                    isLocal = true,
+                                    localPath = if (source?.startsWith("http") == false) source.substringAfter(
+                                        ','
+                                    ) else null
+                                ),
+                                artists = artists.map { ArtistEntity("", it) },
+                            )
 
-                        // now find the best match
-                        // first, search for songs in the database. Supplement with remote songs if no results are found
-                        val matches = if (source == null) {
-                            database.searchSongsInDb(title).first().toMutableList()
-                        } else {
-                            // local songs have a source format of "<id>, <path>", YTM songs have "<url>
-                            var id = source.substringBefore(',')
-                            if (id.isEmpty()) {
-                                id = source.substringAfter("watch?").substringAfter("=").substringBefore('?')
+                            // now find the best match
+                            // first, search for songs in the database. Supplement with remote songs if no results are found
+                            val matches = if (source == null) {
+                                database.searchSongsInDb(title).first().toMutableList()
+                            } else {
+                                // local songs have a source format of "<id>, <path>", YTM songs have "<url>
+                                var id = source.substringBefore(',')
+                                if (id.isEmpty()) {
+                                    id = source.substringAfter("watch?").substringAfter("=")
+                                        .substringBefore('?')
+                                }
+                                val dbResult = mutableListOf(database.song(id).first())
+                                dbResult.addAll(database.searchSongsInDb(title).first())
+                                dbResult.filterNotNull().toMutableList()
                             }
-                            val dbResult = mutableListOf(database.song(id).first())
-                            dbResult.addAll(database.searchSongsInDb(title).first())
-                            dbResult.filterNotNull().toMutableList()
-                        }
-                        // do not search for local songs
-                        val query = "$title ${Uri.decode(artists.joinToString(" "))}"
-                        if (searchOnline && matches.isEmpty() && source?.contains(',') == false) {
-                            val onlineResult =
-                                LocalMediaScanner.youtubeSongLookup(query, source)
-                            onlineResult.forEach { result ->
-                                val result = Song(
-                                    song = result.toSongEntity(),
-                                    artists = result.artists.map {
-                                        ArtistEntity(
-                                            id = it.id ?: ArtistEntity.generateArtistId(),
-                                            name = it.name
-                                        )
-                                    }
-                                )
-                                matches.add(result)
-                            }
-                        }
-                        val oldSize = songs.size
-                        var foundOne = false // TODO: Eventually the user can pick from matches... eventually...
-
-                        // take first song when searching on YTM
-                        if (matchStrength == ScannerM3uMatchCriteria.LEVEL_0 && searchOnline && matches.isNotEmpty()) {
-                            songs.add(Pair(query, matches.first()))
-                        } else {
-                            for (s in matches) {
-                                if (compareM3uSong(mockSong, s, matchStrength = matchStrength)) {
-                                    songs.add(Pair("", s))
-                                    foundOne = true
-                                    break
+                            // do not search for local songs
+                            val query = "$title ${Uri.decode(artists.joinToString(" "))}"
+                            if (searchOnline && matches.isEmpty() && source?.contains(',') == false) {
+                                val onlineResult =
+                                    LocalMediaScanner.youtubeSongLookup(query, source)
+                                onlineResult.forEach { result ->
+                                    val result = Song(
+                                        song = result.toSongEntity(),
+                                        artists = result.artists.map {
+                                            ArtistEntity(
+                                                id = it.id ?: ArtistEntity.generateArtistId(),
+                                                name = it.name
+                                            )
+                                        }
+                                    )
+                                    matches.add(result)
                                 }
                             }
-                        }
+                            val oldSize = songs.size
+                            var foundOne =
+                                false // TODO: Eventually the user can pick from matches... eventually...
 
-                        if (oldSize == songs.size) {
-                            rejectedSongs.add(rawLine)
+                            // take first song when searching on YTM
+                            if (matchStrength == ScannerM3uMatchCriteria.LEVEL_0 && searchOnline && matches.isNotEmpty()) {
+                                songs.add(Pair(query, matches.first()))
+                            } else {
+                                for (s in matches) {
+                                    if (compareM3uSong(
+                                            mockSong,
+                                            s,
+                                            matchStrength = matchStrength
+                                        )
+                                    ) {
+                                        songs.add(Pair("", s))
+                                        foundOne = true
+                                        break
+                                    }
+                                }
+                            }
+
+                            if (oldSize == songs.size) {
+                                rejectedSongs.add(rawLine)
+                            }
+                            processed += 1
+                            val percent =
+                                if (toProcess > 0) ((processed.toFloat() / toProcess) * 100).toInt() else 0
+                            onPercentageChange(percent)
                         }
-                        processed += 1
-                        val percent = if (toProcess > 0) ((processed.toFloat() / toProcess) * 100).toInt() else 0
-                        onPercentageChange(percent)
                     }
+                }
+                while (processed < toProcess) {
+                    delay(10)
                 }
             }
         }
@@ -515,6 +545,4 @@ fun InputStream.readLines(): List<String> {
     return this.bufferedReader().useLines { it.toList() }
 }
 
-// TODO: make importing multithreaded (coroutines) for faster import
-// TODO: add percentage on importing
 // TODO: add search bar on substitute song
