@@ -238,6 +238,7 @@ dependencies {
     implementation(libs.media3.workmanager)
 
     implementation(libs.room.runtime)
+    implementation(libs.room.compiler)
     ksp(libs.room.compiler)
     implementation(libs.room.ktx)
 
@@ -264,10 +265,17 @@ dependencies {
     // sdk24 support
     // Support for N is officially unsupported even it the app should still work. Leave this outside of the version catalog.
     implementation("androidx.webkit:webkit:1.14.0")
+    implementation("org.jetbrains:annotations:23.0.0")
 }
 
 afterEvaluate {
     dependencies {
         add("fullImplementation", project(":ffMetadataEx"))
+    }
+}
+configurations.all {
+    resolutionStrategy {
+        force("org.jetbrains:annotations:23.0.0")
+        exclude(group = "com.intellij", module = "annotations")
     }
 }

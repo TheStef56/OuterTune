@@ -223,6 +223,7 @@ import com.dd3boh.outertune.ui.screens.playlist.OnlinePlaylistScreen
 import com.dd3boh.outertune.ui.screens.search.LocalSearchScreen
 import com.dd3boh.outertune.ui.screens.search.OnlineSearchResult
 import com.dd3boh.outertune.ui.screens.search.OnlineSearchScreen
+import com.dd3boh.outertune.ui.screens.search.OnlineSearchSubstituteResult
 import com.dd3boh.outertune.ui.screens.settings.AboutScreen
 import com.dd3boh.outertune.ui.screens.settings.AccountSyncSettings
 import com.dd3boh.outertune.ui.screens.settings.AppearanceSettings
@@ -676,6 +677,7 @@ class MainActivity : ComponentActivity() {
                                 // don't do anything
                             } else {
                                 navController.navigate("search/${it.urlEncode()}")
+                                Log.v("AO", "search/${it.urlEncode()}")
                                 if (dataStore[PauseSearchHistoryKey] != true) {
                                     database.query {
                                         insert(SearchHistory(query = it))
@@ -881,8 +883,7 @@ class MainActivity : ComponentActivity() {
                             val navHost: @Composable() (() -> Unit) = @Composable {
                                 NavHost(
                                     navController = navController,
-                                    startDestination = (tabOpenedFromShortcut ?: Screens.getAllScreens()
-                                        .find { it.route == defaultOpenTab })?.route
+                                    startDestination = (tabOpenedFromShortcut ?: Screens.getAllScreens().find { it.route == defaultOpenTab })?.route
                                         ?: Screens.Home.route,
                                     enterTransition = {
                                         val currentRouteIndex = navigationItems.indexOfFirst {
@@ -1005,6 +1006,16 @@ class MainActivity : ComponentActivity() {
                                         )
                                     ) {
                                         OnlineSearchResult(navController)
+                                    }
+                                    composable(
+                                        route = "search_sub/{query}",
+                                        arguments = listOf(
+                                            navArgument("query") {
+                                                type = NavType.StringType
+                                            }
+                                        )
+                                    ) {
+                                        OnlineSearchSubstituteResult(navController)
                                     }
                                     composable(
                                         route = "album/{albumId}",

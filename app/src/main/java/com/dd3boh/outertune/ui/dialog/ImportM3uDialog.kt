@@ -13,27 +13,31 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Input
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarDuration
@@ -41,6 +45,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -51,10 +56,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.dd3boh.outertune.LocalDatabase
@@ -78,6 +80,99 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.io.InputStream
 
+fun clampText(string: String, maxLength: Int): String {
+    return if (string.length > maxLength) {
+        string.take(maxLength) + "..."
+    } else {
+        string
+    }
+}
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DropDownResults(
+    title: String,
+    items: List<String>,
+    state: LazyListState,
+    songs: List<Pair<String, Song>>,
+    searchId: MutableState<Int?>?
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        // Header
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = !expanded }
+                .padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f)
+            )
+            Icon(
+                imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                contentDescription = null
+            )
+        }
+
+        // Expandable content
+        if (expanded) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+            ) {
+                LazyColumn(
+                    state = state,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 150.dp)
+                ) {
+                    itemsIndexed(
+                        items = items,
+                        key = { _, song -> song.hashCode() }
+                    ) { index, item ->
+                        Row (
+                            modifier = Modifier
+                                .fillMaxWidth()
+                        ) {
+                            Text(
+                                text = clampText("${index + 1}: $item", 22),
+                                fontSize = 14.sp,
+                                modifier = Modifier
+                                    .fillMaxWidth(fraction = .85f)
+                                    .padding(vertical = 4.dp)
+                            )
+                            if (songs.isNotEmpty()){
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .clickable {
+                                            searchId?.value = index
+                                        }
+                                )
+                            }
+                        }
+                    }
+                }
+                LazyColumnScrollbar(
+                    state = state,
+                    modifier = Modifier
+                        .heightIn(max = 150.dp)
+                )
+            }
+        }
+    }
+}
+
 @Composable
 fun ImportM3uDialog(
     navController: NavController,
@@ -97,8 +192,9 @@ fun ImportM3uDialog(
         mutableStateOf(false)
     }
     var importedTitle by remember { mutableStateOf("") }
-    val importedSongs = remember { mutableStateListOf<Song>() }
-    val rejectedSongs = remember { mutableStateListOf<String>() }
+    val importedSongs = rememberSaveable { mutableStateListOf<Pair<String, Song>>() }
+    val rejectedSongs = rememberSaveable { mutableStateListOf<String>() }
+    val searchId = remember { mutableStateOf<Int?>(null) }
 
     val importM3uLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         CoroutineScope(lmScannerCoroutine).launch {
@@ -197,85 +293,30 @@ fun ImportM3uDialog(
             if (importedSongs.isNotEmpty()) {
                 val importedListState = rememberLazyListState()
 
-                Text(
-                    text = stringResource(R.string.import_success_songs),
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                DropDownResults(
+                    title = stringResource(R.string.import_success_songs),
+                    items = importedSongs.map { (_, song) -> song.title },
+                    state = importedListState,
+                    songs = importedSongs,
+                    searchId = searchId
                 )
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                ) {
-                    LazyColumn(
-                        state = importedListState,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 80.dp)
-                    ) {
-                        itemsIndexed(
-                            items = importedSongs.map { it.title },
-                            key = { _, song -> song.hashCode() }
-                        ) { _, item ->
-                            Text(
-                                text = item,
-                                fontSize = 14.sp,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp)
-                            )
-                        }
-                    }
-
-                    LazyColumnScrollbar(
-                        state = importedListState,
-                        modifier = Modifier
-                            .heightIn(max = 80.dp)
-                    )
-                }
             }
 
             if (rejectedSongs.isNotEmpty()) {
                 val rejectedListState = rememberLazyListState()
 
-                Text(
-                    text = stringResource(R.string.import_failed_songs),
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
+                DropDownResults(
+                    title = stringResource(R.string.import_failed_songs),
+                    items = rejectedSongs,
+                    state = rejectedListState,
+                    songs = emptyList<Pair<String, Song>>(),
+                    searchId = null
                 )
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                ) {
-                    LazyColumn(
-                        state = rejectedListState,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 80.dp)
-                    ) {
-                        itemsIndexed(
-                            items = rejectedSongs,
-                            key = { _, song -> song.hashCode() }
-                        ) { _, item ->
-                            Text(
-                                text = item,
-                                fontSize = 14.sp,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp)
-                            )
-                        }
-                    }
-
-                    LazyColumnScrollbar(
-                        state = rejectedListState,
-                        modifier = Modifier
-                            .heightIn(max = 80.dp)
-                    )
-                }
+            }
+            if (searchId.value != null) {
+                val route = "search_sub/${Uri.encode(importedSongs.map {(query, _ ) -> query}[searchId.value!!])}"
+                navController.navigate(route)
+                searchId.value = null
             }
         }
         // Bottom buttons
@@ -310,9 +351,9 @@ fun ImportM3uDialog(
             navController = navController,
             allowSyncing = false,
             initialTextFieldValue = importedTitle,
-            songIds = importedSongs.map { it.id },
+            songIds = importedSongs.map { (_, song) -> song.id },
             onPreAdd = {
-                importedSongs.forEach {
+                importedSongs.map{(_, song) -> song}.forEach {
                     database.insert(it.toMediaMetadata())
                 }
                 emptyList()
@@ -339,8 +380,8 @@ suspend fun loadM3u(
     uri: Uri,
     matchStrength: ScannerM3uMatchCriteria = ScannerM3uMatchCriteria.LEVEL_1,
     searchOnline: Boolean = false
-): Triple<ArrayList<Song>, ArrayList<String>, String> {
-    val songs = ArrayList<Song>()
+): Triple<ArrayList<Pair<String, Song>>, ArrayList<String>, String> {
+    val songs = ArrayList<Pair<String, Song>>()
     val rejectedSongs = ArrayList<String>()
 
     runCatching {
@@ -381,9 +422,10 @@ suspend fun loadM3u(
                             dbResult.filterNotNull().toMutableList()
                         }
                         // do not search for local songs
+                        val query = "$title ${Uri.decode(artists.joinToString(" "))}"
                         if (searchOnline && matches.isEmpty() && source?.contains(',') == false) {
                             val onlineResult =
-                                LocalMediaScanner.youtubeSongLookup("$title ${Uri.decode(artists.joinToString(" "))}", source)
+                                LocalMediaScanner.youtubeSongLookup(query, source)
                             onlineResult.forEach { result ->
                                 val result = Song(
                                     song = result.toSongEntity(),
@@ -402,11 +444,11 @@ suspend fun loadM3u(
 
                         // take first song when searching on YTM
                         if (matchStrength == ScannerM3uMatchCriteria.LEVEL_0 && searchOnline && matches.isNotEmpty()) {
-                            songs.add(matches.first())
+                            songs.add(Pair(query, matches.first()))
                         } else {
                             for (s in matches) {
                                 if (compareM3uSong(mockSong, s, matchStrength = matchStrength)) {
-                                    songs.add(s)
+                                    songs.add(Pair("", s))
                                     foundOne = true
                                     break
                                 }
