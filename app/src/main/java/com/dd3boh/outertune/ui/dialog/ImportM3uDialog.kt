@@ -10,6 +10,7 @@ package com.dd3boh.outertune.ui.dialog
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -94,7 +95,7 @@ fun DropDownResults(
     items: List<String>,
     state: LazyListState,
     songs: List<Pair<String, Song>>,
-    searchId: MutableState<Int?>?
+    searchId: MutableState<Pair<Boolean, Int>?>?
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -156,7 +157,8 @@ fun DropDownResults(
                                     contentDescription = null,
                                     modifier = Modifier
                                         .clickable {
-                                            searchId?.value = index
+                                            searchId!!.value = Pair(true, index)
+                                            Log.v("SEARCHID", "${searchId.value?.first} ${searchId.value?.second}")
                                         }
                                 )
                             }
@@ -176,6 +178,7 @@ fun DropDownResults(
 @Composable
 fun ImportM3uDialog(
     navController: NavController,
+    substituteSong: MutableState<Song?>,
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -194,7 +197,8 @@ fun ImportM3uDialog(
     var importedTitle by remember { mutableStateOf("") }
     val importedSongs = rememberSaveable { mutableStateListOf<Pair<String, Song>>() }
     val rejectedSongs = rememberSaveable { mutableStateListOf<String>() }
-    val searchId = remember { mutableStateOf<Int?>(null) }
+    val searchId = rememberSaveable { mutableStateOf <Pair<Boolean, Int>?> (Pair(false, 0)) }
+
 
     val importM3uLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         CoroutineScope(lmScannerCoroutine).launch {
@@ -313,10 +317,15 @@ fun ImportM3uDialog(
                     searchId = null
                 )
             }
-            if (searchId.value != null) {
-                val route = "search_sub/${Uri.encode(importedSongs.map {(query, _ ) -> query}[searchId.value!!])}"
+            if (searchId.value != null && searchId.value!!.first) {
+                val route = "search_sub/${Uri.encode(importedSongs.map {(query, _ ) -> query}[searchId.value!!.second])}"
                 navController.navigate(route)
-                searchId.value = null
+                searchId.value = Pair(false, searchId.value!!.second)
+            }
+            if (substituteSong.value != null && searchId.value != null) {
+                val prevSongQuery = importedSongs[searchId.value!!.second].first
+                importedSongs[searchId.value!!.second] = Pair(prevSongQuery, substituteSong.value) as Pair<String, Song>
+                substituteSong.value = null
             }
         }
         // Bottom buttons
@@ -485,3 +494,7 @@ suspend fun loadM3u(
 fun InputStream.readLines(): List<String> {
     return this.bufferedReader().useLines { it.toList() }
 }
+
+// TODO: add percentage on importing
+// TODO: make importing multithreaded (coroutines) for faster import
+// TODO: add search bar on substitute song

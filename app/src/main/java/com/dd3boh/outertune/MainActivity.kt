@@ -180,6 +180,7 @@ import com.dd3boh.outertune.constants.StopMusicOnTaskClearKey
 import com.dd3boh.outertune.constants.UpdateAvailableKey
 import com.dd3boh.outertune.db.MusicDatabase
 import com.dd3boh.outertune.db.entities.SearchHistory
+import com.dd3boh.outertune.db.entities.Song
 import com.dd3boh.outertune.extensions.tabMode
 import com.dd3boh.outertune.playback.DownloadUtil
 import com.dd3boh.outertune.playback.MusicService
@@ -561,6 +562,7 @@ class MainActivity : ComponentActivity() {
                     val (slimNav) = rememberPreference(SlimNavBarKey, defaultValue = false)
                     val (enabledTabs) = rememberPreference(EnabledTabsKey, defaultValue = DEFAULT_ENABLED_TABS)
                     val navigationItems = Screens.getScreens(enabledTabs)
+                    val substituteSong = remember { mutableStateOf<Song?>(null) }
                     val (defaultOpenTab, onDefaultOpenTabChange) = rememberPreference(
                         DefaultOpenTabKey,
                         defaultValue = Screens.Home.route
@@ -965,10 +967,10 @@ class MainActivity : ComponentActivity() {
                                         LibraryAlbumsScreen(navController)
                                     }
                                     composable(Screens.Playlists.route) {
-                                        LibraryPlaylistsScreen(navController)
+                                        LibraryPlaylistsScreen(navController = navController, substituteSong = substituteSong)
                                     }
                                     composable(Screens.Library.route) {
-                                        LibraryScreen(navController, scrollBehavior)
+                                        LibraryScreen(navController, scrollBehavior, substituteSong)
                                     }
                                     composable("history") {
                                         HistoryScreen(navController)
@@ -1012,10 +1014,10 @@ class MainActivity : ComponentActivity() {
                                         arguments = listOf(
                                             navArgument("query") {
                                                 type = NavType.StringType
-                                            }
+                                            },
                                         )
                                     ) {
-                                        OnlineSearchSubstituteResult(navController)
+                                        OnlineSearchSubstituteResult(navController, substituteSong)
                                     }
                                     composable(
                                         route = "album/{albumId}",
