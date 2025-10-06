@@ -225,6 +225,7 @@ import com.dd3boh.outertune.ui.screens.search.LocalSearchScreen
 import com.dd3boh.outertune.ui.screens.search.OnlineSearchResult
 import com.dd3boh.outertune.ui.screens.search.OnlineSearchScreen
 import com.dd3boh.outertune.ui.screens.search.OnlineSearchSubstituteResult
+import com.dd3boh.outertune.ui.screens.search.OnlineSearchSubstituteScreen
 import com.dd3boh.outertune.ui.screens.settings.AboutScreen
 import com.dd3boh.outertune.ui.screens.settings.AccountSyncSettings
 import com.dd3boh.outertune.ui.screens.settings.AppearanceSettings
@@ -1114,7 +1115,23 @@ class MainActivity : ComponentActivity() {
                                                         WindowInsets(0.dp)
                                                     }
                                                 )
-                                        ) {}
+                                        ) {
+                                            OnlineSearchSubstituteScreen(
+                                                query = querySub.text,
+                                                onQueryChange = onQuerySubChange,
+                                                substituteSong = substituteSong,
+                                                navController = navController,
+                                                onSearch = {
+                                                    navController.navigate("search_sub/${it.urlEncode()}")
+                                                    if (dataStore[PauseSearchHistoryKey] != true) {
+                                                        database.query {
+                                                            insert(SearchHistory(query = it))
+                                                        }
+                                                    }
+                                                },
+                                                onDismiss = { onSubSearchActiveChange(false) }
+                                            )
+                                        }
                                     }
                                     composable(
                                         route = "album/{albumId}",

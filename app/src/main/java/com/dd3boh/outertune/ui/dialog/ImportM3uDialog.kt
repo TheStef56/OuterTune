@@ -215,7 +215,8 @@ fun ImportM3uDialog(
         LazyListState()
     }
 
-    val expanded = rememberSaveable { mutableStateOf(false) }
+    val importedExpanded = rememberSaveable { mutableStateOf(false) }
+    val rejectedExpanded = rememberSaveable { mutableStateOf(false) }
 
     var percentage by remember { mutableIntStateOf(0) }
 
@@ -328,7 +329,7 @@ fun ImportM3uDialog(
                     state = importedListState,
                     songs = importedSongs,
                     searchId = searchId,
-                    expanded = expanded
+                    expanded = importedExpanded
                 )
             }
 
@@ -340,7 +341,7 @@ fun ImportM3uDialog(
                     state = rejectedListState,
                     songs = emptyMutableList,
                     searchId = null,
-                    expanded = expanded
+                    expanded = rejectedExpanded
                 )
             }
             if (searchId.value != null && searchId.value!!.first) {
