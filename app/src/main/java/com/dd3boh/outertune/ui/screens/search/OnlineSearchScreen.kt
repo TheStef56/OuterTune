@@ -17,12 +17,14 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
@@ -46,6 +48,8 @@ import com.dd3boh.outertune.LocalSnackbarHostState
 import com.dd3boh.outertune.R
 import com.dd3boh.outertune.constants.SuggestionItemHeight
 import com.dd3boh.outertune.constants.SwipeToQueueKey
+import com.dd3boh.outertune.db.entities.ArtistEntity
+import com.dd3boh.outertune.db.entities.Song
 import com.dd3boh.outertune.extensions.toMediaItem
 import com.dd3boh.outertune.extensions.togglePlayPause
 import com.dd3boh.outertune.models.toMediaMetadata
@@ -76,6 +80,7 @@ fun OnlineSearchScreen(
     query: String,
     onQueryChange: (TextFieldValue) -> Unit,
     navController: NavController,
+    substituteSong: MutableState<Song?>,
     onSearch: (String) -> Unit,
     onDismiss: () -> Unit,
     viewModel: OnlineSearchSuggestionViewModel = hiltViewModel(),
@@ -175,53 +180,82 @@ fun OnlineSearchScreen(
             items = viewState.items,
             key = { it.id }
         ) { item ->
+            val isSub = navController.currentBackStackEntry?.destination?.route?.startsWith("search_sub") == true
+            if (isSub && item !is SongItem) return@items
             val content: @Composable () -> Unit = {
-                YouTubeListItem(
-                    item = item,
-                    isActive = when (item) {
+                val isActive: Boolean = if (isSub) {
+                    mediaMetadata?.id == item.id
+                } else {
+                    when (item) {
                         is SongItem -> mediaMetadata?.id == item.id
                         is AlbumItem -> mediaMetadata?.album?.id == item.id
                         else -> false
-                    },
+                    }
+                }
+                YouTubeListItem(
+                    item = item,
+                    isActive = isActive,
                     isPlaying = isPlaying,
                     trailingContent = {
                         IconButton(
                             onClick = {
-                                menuState.show {
-                                    when (item) {
-                                        is SongItem ->
-                                            YouTubeSongMenu(
-                                                song = item,
-                                                navController = navController,
-                                                onDismiss = menuState::dismiss,
+                                if (isSub){
+                                    val songSuggestions = viewState.items.filter { it is SongItem }
+                                    val songSuggestionsToSongs = songSuggestions.map { (it as SongItem).toMediaMetadata() }
+                                    songSuggestionsToSongs.forEach { mediaData ->
+                                        if (mediaData.id == item.id) {
+                                            substituteSong.value = Song(
+                                                song = mediaData.toSongEntity(),
+                                                artists = mediaData.artists.map {
+                                                    ArtistEntity(
+                                                        id = it.id ?: ArtistEntity.generateArtistId(),
+                                                        name = it.name
+                                                    )
+                                                }
                                             )
+                                        }
+                                    }
+                                    while (navController.currentBackStackEntry?.destination?.route?.startsWith("search_sub") == true) {
+                                        navController.popBackStack()
+                                    }
+                                    onDismiss()
+                                } else {
+                                    menuState.show {
+                                        when (item) {
+                                            is SongItem ->
+                                                YouTubeSongMenu(
+                                                    song = item,
+                                                    navController = navController,
+                                                    onDismiss = menuState::dismiss,
+                                                )
 
-                                        is AlbumItem ->
-                                            YouTubeAlbumMenu(
-                                                albumItem = item,
-                                                navController = navController,
-                                                onDismiss = menuState::dismiss,
-                                            )
+                                            is AlbumItem ->
+                                                YouTubeAlbumMenu(
+                                                    albumItem = item,
+                                                    navController = navController,
+                                                    onDismiss = menuState::dismiss,
+                                                )
 
-                                        is ArtistItem ->
-                                            YouTubeArtistMenu(
-                                                artist = item,
-                                                onDismiss = menuState::dismiss,
-                                            )
+                                            is ArtistItem ->
+                                                YouTubeArtistMenu(
+                                                    artist = item,
+                                                    onDismiss = menuState::dismiss,
+                                                )
 
-                                        is PlaylistItem ->
-                                            YouTubePlaylistMenu(
-                                                navController = navController,
-                                                playlist = item,
-                                                coroutineScope = scope,
-                                                onDismiss = menuState::dismiss,
-                                            )
+                                            is PlaylistItem ->
+                                                YouTubePlaylistMenu(
+                                                    navController = navController,
+                                                    playlist = item,
+                                                    coroutineScope = scope,
+                                                    onDismiss = menuState::dismiss,
+                                                )
+                                        }
                                     }
                                 }
                             }
                         ) {
                             Icon(
-                                imageVector = Icons.Rounded.MoreVert,
+                                imageVector = if (!isSub) Icons.Rounded.MoreVert else {Icons.Rounded.SwapHoriz},
                                 contentDescription = null
                             )
                         }
@@ -242,10 +276,9 @@ fun OnlineSearchScreen(
                                             ),
                                             replace = true,
                                         )
-                                        onDismiss()
+                                        if (!isSub) onDismiss()
                                     }
                                 }
-
                                 is AlbumItem -> {
                                     navController.navigate("album/${item.id}")
                                     onDismiss()
