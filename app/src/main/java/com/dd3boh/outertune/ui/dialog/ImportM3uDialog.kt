@@ -27,11 +27,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Input
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material3.Button
@@ -95,7 +95,7 @@ fun DropDownResults(
     title: String,
     items: List<String>,
     state: LazyListState,
-    songs: List<Pair<String, Song>>,
+    songs: MutableList<Pair<String, Song>>,
     searchId: MutableState<Pair<Boolean, Int>?>?,
     expanded: MutableState<Boolean>
 ) {
@@ -147,10 +147,19 @@ fun DropDownResults(
                                 text = clampText("${index + 1}: $item", 22),
                                 fontSize = 14.sp,
                                 modifier = Modifier
-                                    .fillMaxWidth(fraction = .85f)
+                                    .fillMaxWidth(fraction = .75f)
                                     .padding(vertical = 4.dp)
                             )
                             if (songs.isNotEmpty()){
+                                Icon(
+                                    imageVector = Icons.Rounded.Delete,
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .clickable {
+                                            songs.removeAt(index)
+                                        }
+                                )
+                                Spacer(Modifier.width(5.dp))
                                 Icon(
                                     imageVector = Icons.Rounded.Edit,
                                     contentDescription = null,
@@ -163,7 +172,7 @@ fun DropDownResults(
                         }
                     }
                 }
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(15.dp))
                 LazyColumnScrollbar(
                     state = state,
                     modifier = Modifier
@@ -324,11 +333,12 @@ fun ImportM3uDialog(
             }
 
             if (rejectedSongs.isNotEmpty()) {
+                val emptyMutableList: MutableList<Pair<String, Song>> = mutableListOf()
                 DropDownResults(
                     title = "${stringResource(R.string.import_failed_songs)} (${rejectedSongs.size})",
                     items = rejectedSongs,
                     state = rejectedListState,
-                    songs = emptyList<Pair<String, Song>>(),
+                    songs = emptyMutableList,
                     searchId = null,
                     expanded = expanded
                 )
