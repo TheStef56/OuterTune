@@ -80,7 +80,7 @@ fun OnlineSearchScreen(
     query: String,
     onQueryChange: (TextFieldValue) -> Unit,
     navController: NavController,
-    substituteSong: MutableState<Song?>,
+    replaceSong: MutableState<Song?>,
     onSearch: (String) -> Unit,
     onDismiss: () -> Unit,
     viewModel: OnlineSearchSuggestionViewModel = hiltViewModel(),
@@ -180,10 +180,10 @@ fun OnlineSearchScreen(
             items = viewState.items,
             key = { it.id }
         ) { item ->
-            val isSub = navController.currentBackStackEntry?.destination?.route?.startsWith("search_sub") == true
-            if (isSub && item !is SongItem) return@items
+            val isReplace = navController.currentBackStackEntry?.destination?.route?.startsWith("search_rep") == true
+            if (isReplace && item !is SongItem) return@items
             val content: @Composable () -> Unit = {
-                val isActive: Boolean = if (isSub) {
+                val isActive: Boolean = if (isReplace) {
                     mediaMetadata?.id == item.id
                 } else {
                     when (item) {
@@ -199,12 +199,12 @@ fun OnlineSearchScreen(
                     trailingContent = {
                         IconButton(
                             onClick = {
-                                if (isSub){
+                                if (isReplace){
                                     val songSuggestions = viewState.items.filter { it is SongItem }
                                     val songSuggestionsToSongs = songSuggestions.map { (it as SongItem).toMediaMetadata() }
                                     songSuggestionsToSongs.forEach { mediaData ->
                                         if (mediaData.id == item.id) {
-                                            substituteSong.value = Song(
+                                            replaceSong.value = Song(
                                                 song = mediaData.toSongEntity(),
                                                 artists = mediaData.artists.map {
                                                     ArtistEntity(
@@ -215,7 +215,7 @@ fun OnlineSearchScreen(
                                             )
                                         }
                                     }
-                                    while (navController.currentBackStackEntry?.destination?.route?.startsWith("search_sub") == true) {
+                                    while (navController.currentBackStackEntry?.destination?.route?.startsWith("search_rep") == true) {
                                         navController.popBackStack()
                                     }
                                     onDismiss()
@@ -255,7 +255,7 @@ fun OnlineSearchScreen(
                             }
                         ) {
                             Icon(
-                                imageVector = if (!isSub) Icons.Rounded.MoreVert else {Icons.Rounded.SwapHoriz},
+                                imageVector = if (!isReplace) Icons.Rounded.MoreVert else {Icons.Rounded.SwapHoriz},
                                 contentDescription = null
                             )
                         }
@@ -276,7 +276,7 @@ fun OnlineSearchScreen(
                                             ),
                                             replace = true,
                                         )
-                                        if (!isSub) onDismiss()
+                                        if (!isReplace) onDismiss()
                                     }
                                 }
                                 is AlbumItem -> {

@@ -102,7 +102,7 @@ import com.dd3boh.outertune.viewmodels.LibraryViewModel
 fun LibraryScreen(
     navController: NavController,
     scrollBehavior: TopAppBarScrollBehavior,
-    substituteSong: MutableState<Song?>,
+    replaceSong: MutableState<Song?>,
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
     val menuState = LocalMenuState.current
@@ -315,7 +315,7 @@ fun LibraryScreen(
             LibraryFilter.PLAYLISTS ->
                 LibraryPlaylistsScreen(
                     navController,
-                    substituteSong = substituteSong,
+                    replaceSong = replaceSong,
                     libraryFilterContent = filterContent
                 )
 

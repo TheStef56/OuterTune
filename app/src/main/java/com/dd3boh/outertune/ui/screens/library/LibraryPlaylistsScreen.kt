@@ -1,11 +1,6 @@
 package com.dd3boh.outertune.ui.screens.library
 
 import android.content.pm.PackageManager
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -55,27 +50,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
-import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import com.dd3boh.outertune.LocalMenuState
 import com.dd3boh.outertune.LocalPlayerAwareWindowInsets
 import com.dd3boh.outertune.MainActivity
 import com.dd3boh.outertune.R
 import com.dd3boh.outertune.constants.CONTENT_TYPE_HEADER
 import com.dd3boh.outertune.constants.CONTENT_TYPE_PLAYLIST
-import com.dd3boh.outertune.constants.DEFAULT_ENABLED_TABS
-import com.dd3boh.outertune.constants.EnabledTabsKey
 import com.dd3boh.outertune.constants.GridThumbnailHeight
 import com.dd3boh.outertune.constants.LibraryViewType
 import com.dd3boh.outertune.constants.LibraryViewTypeKey
@@ -102,10 +89,7 @@ import com.dd3boh.outertune.ui.dialog.CreatePlaylistDialog
 import com.dd3boh.outertune.ui.dialog.ImportM3uDialog
 import com.dd3boh.outertune.ui.menu.ActionDropdown
 import com.dd3boh.outertune.ui.menu.DropdownItem
-import com.dd3boh.outertune.ui.screens.Screens
-import com.dd3boh.outertune.ui.screens.search.OnlineSearchResult
 import com.dd3boh.outertune.ui.utils.MEDIA_PERMISSION_LEVEL
-import com.dd3boh.outertune.ui.utils.appBarScrollBehavior
 import com.dd3boh.outertune.utils.rememberEnumPreference
 import com.dd3boh.outertune.utils.rememberPreference
 import com.dd3boh.outertune.viewmodels.LibraryPlaylistsViewModel
@@ -115,7 +99,7 @@ import com.dd3boh.outertune.viewmodels.LibraryPlaylistsViewModel
 fun LibraryPlaylistsScreen(
     navController: NavController,
     viewModel: LibraryPlaylistsViewModel = hiltViewModel(),
-    substituteSong: MutableState<Song?>,
+    replaceSong: MutableState<Song?>,
     libraryFilterContent: @Composable() (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
@@ -471,7 +455,7 @@ fun LibraryPlaylistsScreen(
         if (showImportM3uDialog) {
             ImportM3uDialog(
                 navController = navController,
-                substituteSong = substituteSong,
+                replaceSong = replaceSong,
                 onDismiss = { showImportM3uDialog = false }
             )
         }

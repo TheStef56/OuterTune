@@ -186,7 +186,7 @@ fun DropDownResults(
 @Composable
 fun ImportM3uDialog(
     navController: NavController,
-    substituteSong: MutableState<Song?>,
+    replaceSong: MutableState<Song?>,
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -345,14 +345,14 @@ fun ImportM3uDialog(
                 )
             }
             if (searchId.value != null && searchId.value!!.first) {
-                val route = "search_sub/${Uri.encode(importedSongs.map {(query, _ ) -> query}[searchId.value!!.second])}"
+                val route = "search_rep/${Uri.encode(importedSongs.map {(query, _ ) -> query}[searchId.value!!.second])}?rep=true"
                 navController.navigate(route)
                 searchId.value = Pair(false, searchId.value!!.second)
             }
-            if (substituteSong.value != null && searchId.value != null) {
+            if (replaceSong.value != null && searchId.value != null) {
                 val prevSongQuery = importedSongs[searchId.value!!.second].first
-                importedSongs[searchId.value!!.second] = Pair(prevSongQuery, substituteSong.value) as Pair<String, Song>
-                substituteSong.value = null
+                importedSongs[searchId.value!!.second] = Pair(prevSongQuery, replaceSong.value) as Pair<String, Song>
+                replaceSong.value = null
             }
         }
         // Bottom buttons

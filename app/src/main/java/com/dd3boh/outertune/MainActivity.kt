@@ -224,8 +224,6 @@ import com.dd3boh.outertune.ui.screens.playlist.OnlinePlaylistScreen
 import com.dd3boh.outertune.ui.screens.search.LocalSearchScreen
 import com.dd3boh.outertune.ui.screens.search.OnlineSearchResult
 import com.dd3boh.outertune.ui.screens.search.OnlineSearchScreen
-import com.dd3boh.outertune.ui.screens.search.OnlineSearchSubstituteResult
-import com.dd3boh.outertune.ui.screens.search.OnlineSearchSubstituteScreen
 import com.dd3boh.outertune.ui.screens.settings.AboutScreen
 import com.dd3boh.outertune.ui.screens.settings.AccountSyncSettings
 import com.dd3boh.outertune.ui.screens.settings.AppearanceSettings
@@ -563,7 +561,7 @@ class MainActivity : ComponentActivity() {
                     val (slimNav) = rememberPreference(SlimNavBarKey, defaultValue = false)
                     val (enabledTabs) = rememberPreference(EnabledTabsKey, defaultValue = DEFAULT_ENABLED_TABS)
                     val navigationItems = Screens.getScreens(enabledTabs)
-                    val substituteSong = remember { mutableStateOf<Song?>(null) }
+                    val replaceSong = remember { mutableStateOf<Song?>(null) }
                     val (defaultOpenTab, onDefaultOpenTabChange) = rememberPreference(
                         DefaultOpenTabKey,
                         defaultValue = Screens.Home.route
@@ -657,7 +655,7 @@ class MainActivity : ComponentActivity() {
                     val (query, onQueryChange) = rememberSaveable(stateSaver = TextFieldValue.Saver) {
                         mutableStateOf(TextFieldValue())
                     }
-                    val (querySub, onQuerySubChange) = rememberSaveable(stateSaver = TextFieldValue.Saver) {
+                    val (queryRep, onQueryRepChange) = rememberSaveable(stateSaver = TextFieldValue.Saver) {
                         mutableStateOf(TextFieldValue())
                     }
 
@@ -665,7 +663,7 @@ class MainActivity : ComponentActivity() {
                         mutableStateOf(false)
                     }
 
-                    var searchSubActive by rememberSaveable {
+                    var searchRepActive by rememberSaveable {
                         mutableStateOf(false)
                     }
 
@@ -679,12 +677,12 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    val onSubSearchActiveChange: (Boolean) -> Unit = { newActive ->
-                        searchSubActive = newActive
+                    val onRepSearchActiveChange: (Boolean) -> Unit = { newActive ->
+                        searchRepActive = newActive
                         if (!newActive) {
                             focusManager.clearFocus()
                             if (navigationItems.fastAny { it.route == navBackStackEntry?.destination?.route }) {
-                                onQuerySubChange(TextFieldValue())
+                                onQueryRepChange(TextFieldValue())
                             }
                         }
                     }
@@ -708,10 +706,10 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    val onSearchSub: (String) -> Unit = {
+                    val onSearchRep: (String) -> Unit = {
                         if (it.isNotEmpty()) {
-                            onSubSearchActiveChange(false)
-                            navController.navigate("search_sub/${it.urlEncode()}")
+                            onRepSearchActiveChange(false)
+                            navController.navigate("search_rep/${it.urlEncode()}?rep=true")
                         }
                     }
 
@@ -823,13 +821,13 @@ class MainActivity : ComponentActivity() {
                             onQueryChange(TextFieldValue())
                         }
 
-                        if (navBackStackEntry?.destination?.route?.startsWith("search_sub/") == true) {
+                        if (navBackStackEntry?.destination?.route?.startsWith("search_rep/") == true) {
                             val searchQuery = withContext(Dispatchers.IO) {
                                 navBackStackEntry?.arguments?.getString("query")!!
                             }
-                            onQuerySubChange(TextFieldValue(searchQuery, TextRange(searchQuery.length)))
+                            onQueryRepChange(TextFieldValue(searchQuery, TextRange(searchQuery.length)))
                         } else if (navigationItems.fastAny { it.route == navBackStackEntry?.destination?.route }) {
-                            onQuerySubChange(TextFieldValue())
+                            onQueryRepChange(TextFieldValue())
                         }
 
                         if (navigationItems.fastAny { it.route == navBackStackEntry?.destination?.route })
@@ -1002,10 +1000,10 @@ class MainActivity : ComponentActivity() {
                                         LibraryAlbumsScreen(navController)
                                     }
                                     composable(Screens.Playlists.route) {
-                                        LibraryPlaylistsScreen(navController = navController, substituteSong = substituteSong)
+                                        LibraryPlaylistsScreen(navController = navController, replaceSong = replaceSong)
                                     }
                                     composable(Screens.Library.route) {
-                                        LibraryScreen(navController, scrollBehavior, substituteSong)
+                                        LibraryScreen(navController, scrollBehavior, replaceSong)
                                     }
                                     composable("history") {
                                         HistoryScreen(navController)
@@ -1042,26 +1040,32 @@ class MainActivity : ComponentActivity() {
                                             }
                                         )
                                     ) {
-                                        OnlineSearchResult(navController)
+                                        OnlineSearchResult(
+                                            navController,
+                                            replaceSong
+                                        )
                                     }
                                     composable(
-                                        route = "search_sub/{query}",
+                                        route = "search_rep/{query}?rep={rep}",
                                         arguments = listOf(
                                             navArgument("query") {
                                                 type = NavType.StringType
                                             },
+                                            navArgument("rep") {
+                                                type = NavType.BoolType; defaultValue = true
+                                            }
                                         )
                                     ) {
-                                        OnlineSearchSubstituteResult(
+                                        OnlineSearchResult(
                                             navController,
-                                            substituteSong
+                                            replaceSong,
                                         )
                                         SearchBar(
-                                            query = querySub,
-                                            onQueryChange = onQuerySubChange,
-                                            onSearch = onSearchSub,
-                                            active = searchSubActive,
-                                            onActiveChange = onSubSearchActiveChange,
+                                            query = queryRep,
+                                            onQueryChange = onQueryRepChange,
+                                            onSearch = onSearchRep,
+                                            active = searchRepActive,
+                                            onActiveChange = onRepSearchActiveChange,
                                             scrollBehavior = searchBarScrollBehavior,
                                             placeholder = {
                                                 Text(
@@ -1077,15 +1081,15 @@ class MainActivity : ComponentActivity() {
                                                 IconButton(
                                                     onClick = {
                                                         when {
-                                                            searchSubActive -> onSubSearchActiveChange(
+                                                            searchRepActive -> onRepSearchActiveChange(
                                                                 false
                                                             )
 
-                                                            !searchSubActive -> {
+                                                            !searchRepActive -> {
                                                                 navController.navigateUp()
                                                             }
 
-                                                            else -> onSubSearchActiveChange(true)
+                                                            else -> onRepSearchActiveChange(true)
                                                         }
                                                     },
                                                 ) {
@@ -1116,20 +1120,20 @@ class MainActivity : ComponentActivity() {
                                                     }
                                                 )
                                         ) {
-                                            OnlineSearchSubstituteScreen(
-                                                query = querySub.text,
-                                                onQueryChange = onQuerySubChange,
-                                                substituteSong = substituteSong,
+                                            OnlineSearchScreen(
+                                                query = queryRep.text,
+                                                onQueryChange = onQueryRepChange,
+                                                replaceSong = replaceSong,
                                                 navController = navController,
                                                 onSearch = {
-                                                    navController.navigate("search_sub/${it.urlEncode()}")
+                                                    navController.navigate("search_rep/${it.urlEncode()}?rep=true")
                                                     if (dataStore[PauseSearchHistoryKey] != true) {
                                                         database.query {
                                                             insert(SearchHistory(query = it))
                                                         }
                                                     }
                                                 },
-                                                onDismiss = { onSubSearchActiveChange(false) }
+                                                onDismiss = { onRepSearchActiveChange(false) }
                                             )
                                         }
                                     }
@@ -1426,6 +1430,7 @@ class MainActivity : ComponentActivity() {
                                                     query = query.text,
                                                     onQueryChange = onQueryChange,
                                                     navController = navController,
+                                                    replaceSong = replaceSong,
                                                     onSearch = {
                                                         if (youtubeNavigator(it.toUri())) {
                                                             return@OnlineSearchScreen
