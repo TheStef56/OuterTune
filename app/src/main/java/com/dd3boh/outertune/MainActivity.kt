@@ -1090,7 +1090,10 @@ class MainActivity : ComponentActivity() {
                                                 ) {
                                                     Icon(
                                                         imageVector =
-                                                            if (searchSubActive) {
+                                                            if (searchActive || navBackStackEntry?.destination?.route?.startsWith(
+                                                                    "search"
+                                                                ) == true
+                                                            ) {
                                                                 Icons.AutoMirrored.Rounded.ArrowBack
                                                             } else {
                                                                 Icons.Rounded.Search

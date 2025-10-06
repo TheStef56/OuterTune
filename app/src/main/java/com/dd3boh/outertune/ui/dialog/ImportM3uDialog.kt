@@ -340,7 +340,6 @@ fun ImportM3uDialog(
             }
             if (substituteSong.value != null && searchId.value != null) {
                 val prevSongQuery = importedSongs[searchId.value!!.second].first
-                Toast.makeText(context, "'${importedSongs[searchId.value!!.second].second.title}' replaced with '${substituteSong.value!!.title}'", Toast.LENGTH_SHORT).show()
                 importedSongs[searchId.value!!.second] = Pair(prevSongQuery, substituteSong.value) as Pair<String, Song>
                 substituteSong.value = null
             }
