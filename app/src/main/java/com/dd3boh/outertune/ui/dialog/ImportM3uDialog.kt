@@ -10,6 +10,7 @@ package com.dd3boh.outertune.ui.dialog
 
 import android.content.Context
 import android.net.Uri
+import android.provider.OpenableColumns
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -86,13 +87,6 @@ import java.io.InputStream
 import kotlin.collections.distinctBy
 import kotlin.collections.orEmpty
 
-fun clampText(string: String, maxLength: Int): String {
-    return if (string.length > maxLength && !string.contains("EXTINF")) {
-        string.take(maxLength) + "..."
-    } else {
-        string
-    }
-}
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DropDownResults(
@@ -148,10 +142,10 @@ fun DropDownResults(
                                 .fillMaxWidth()
                         ) {
                             Text(
-                                text = clampText("${index + 1}: $item", 22),
+                                text = "${index + 1}: $item",
                                 fontSize = 14.sp,
                                 modifier = Modifier
-                                    .fillMaxWidth(fraction = .75f)
+                                    .fillMaxWidth(fraction = .70f)
                                     .padding(vertical = 4.dp)
                             )
                             if (songs.isNotEmpty()){
@@ -565,7 +559,18 @@ suspend fun loadM3u(
             )
         }
     }
-    return Triple(songs, rejectedSongs, uri.path?.substringAfterLast('/')?.substringBeforeLast('.') ?: "")
+    var name: String? = null
+    val cursor = context.contentResolver.query(uri, null, null, null, null)
+    cursor?.use {
+        if (it.moveToFirst()) {
+            val nameIndex = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (nameIndex != -1) {
+                name = it.getString(nameIndex)
+            }
+        }
+    }
+    val fileName = (name ?: (uri.path?.substringAfterLast('/') ?: "")).substringBeforeLast('.')
+    return Triple(songs, rejectedSongs, fileName)
 }
 
 /**
