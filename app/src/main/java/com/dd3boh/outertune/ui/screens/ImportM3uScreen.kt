@@ -7,7 +7,6 @@
  */
 package com.dd3boh.outertune.ui.dialog
 
-
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -29,7 +28,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.Input
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.rounded.Delete
@@ -45,6 +44,7 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -60,11 +60,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.dd3boh.outertune.LocalDatabase
 import com.dd3boh.outertune.LocalSnackbarHostState
 import com.dd3boh.outertune.R
 import com.dd3boh.outertune.constants.ScannerM3uMatchCriteria
+import com.dd3boh.outertune.constants.TopBarInsets
 import com.dd3boh.outertune.db.MusicDatabase
 import com.dd3boh.outertune.db.entities.ArtistEntity
 import com.dd3boh.outertune.db.entities.Song
@@ -72,10 +74,13 @@ import com.dd3boh.outertune.db.entities.SongEntity
 import com.dd3boh.outertune.models.toMediaMetadata
 import com.dd3boh.outertune.ui.component.EnumListPreference
 import com.dd3boh.outertune.ui.component.LazyColumnScrollbar
+import com.dd3boh.outertune.ui.component.button.IconButton
+import com.dd3boh.outertune.ui.utils.backToMain
 import com.dd3boh.outertune.utils.lmScannerCoroutine
 import com.dd3boh.outertune.utils.reportException
 import com.dd3boh.outertune.utils.scanners.LocalMediaScanner
 import com.dd3boh.outertune.utils.scanners.LocalMediaScanner.Companion.compareM3uSong
+import com.dd3boh.outertune.viewmodels.ImportM3uViewModel
 import com.zionhuang.innertube.YouTube
 import com.zionhuang.innertube.models.SongItem
 import kotlinx.coroutines.CoroutineScope
@@ -85,7 +90,12 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.io.InputStream
 import kotlin.collections.distinctBy
+import kotlin.collections.first
 import kotlin.collections.orEmpty
+import kotlin.text.contains
+import kotlin.text.startsWith
+import kotlin.text.substringAfter
+import kotlin.text.substringBefore
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -145,7 +155,7 @@ fun DropDownResults(
                                 text = "${index + 1}: $item",
                                 fontSize = 14.sp,
                                 modifier = Modifier
-                                    .fillMaxWidth(fraction = .70f)
+                                    .fillMaxWidth(fraction = .75f)
                                     .padding(vertical = 4.dp)
                             )
                             if (songs.isNotEmpty()){
@@ -170,7 +180,7 @@ fun DropDownResults(
                         }
                     }
                 }
-                Spacer(Modifier.width(70.dp))
+                Spacer(Modifier.width(100.dp))
                 LazyColumnScrollbar(
                     state = state,
                     modifier = Modifier
@@ -181,11 +191,12 @@ fun DropDownResults(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ImportM3uDialog(
+fun ImportM3uScreen(
     navController: NavController,
     replaceSong: MutableState<Song?>,
-    onDismiss: () -> Unit,
+    viewModel: ImportM3uViewModel = viewModel ()
 ) {
     val context = LocalContext.current
     val database = LocalDatabase.current
@@ -201,22 +212,20 @@ fun ImportM3uDialog(
         mutableStateOf(false)
     }
     var importedTitle by rememberSaveable { mutableStateOf("") }
-    val importedSongs = rememberSaveable { mutableStateListOf<Pair<String, Song>>() }
-    val rejectedSongs = rememberSaveable { mutableStateListOf<String>() }
-    val searchId = rememberSaveable { mutableStateOf <Pair<Boolean, Int>?> (Pair(false, 0)) }
+    val searchId = rememberSaveable { mutableStateOf<Pair<Boolean, Int>?>(Pair(false, 0)) }
 
-    val importedListState = rememberSaveable ( saver = LazyListState.Saver ) {
+    val importedListState = rememberSaveable(saver = LazyListState.Saver) {
         LazyListState()
     }
 
-    val rejectedListState = rememberSaveable ( saver = LazyListState.Saver ) {
+    val rejectedListState = rememberSaveable(saver = LazyListState.Saver) {
         LazyListState()
     }
 
     val importedExpanded = rememberSaveable { mutableStateOf(false) }
     val rejectedExpanded = rememberSaveable { mutableStateOf(false) }
 
-    var percentage by remember { mutableIntStateOf(0) }
+    var percentage by rememberSaveable { mutableIntStateOf(0) }
 
     val importM3uLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         CoroutineScope(lmScannerCoroutine).launch {
@@ -234,10 +243,10 @@ fun ImportM3uDialog(
                             percentage = newVal
                         }
                     )
-                    importedSongs.clear()
-                    importedSongs.addAll(result.first)
-                    rejectedSongs.clear()
-                    rejectedSongs.addAll(result.second)
+                    viewModel.importedSongs.clear()
+                    viewModel.importedSongs.addAll(result.first)
+                    viewModel.rejectedSongs.clear()
+                    viewModel.rejectedSongs.addAll(result.second)
                     importedTitle = result.third
                 }
             } catch (e: Exception) {
@@ -246,159 +255,146 @@ fun ImportM3uDialog(
                 isLoading = false
             }
         }
-
     }
-
-
-    DefaultDialog(
-        onDismiss = onDismiss,
-        icon = { Icon(Icons.AutoMirrored.Rounded.Input, null) },
-        title = { Text(stringResource(R.string.import_playlist)) },
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-        ) {
-            // Preferences section
-            EnumListPreference(
-                title = { Text(stringResource(R.string.scanner_sensitivity_title)) },
-                icon = { Icon(Icons.Rounded.GraphicEq, null) },
-                selectedValue = scannerSensitivity,
-                onValueSelected = { scannerSensitivity = it },
-                valueText = {
-                    when (it) {
-                        ScannerM3uMatchCriteria.LEVEL_0 -> stringResource(R.string.scanner_sensitivity_L0)
-                        ScannerM3uMatchCriteria.LEVEL_1 -> stringResource(R.string.scanner_sensitivity_L1)
-                        ScannerM3uMatchCriteria.LEVEL_2 -> stringResource(R.string.scanner_sensitivity_L2)
-                    }
-                }
-            )
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Checkbox(
-                    checked = remoteLookup,
-                    onCheckedChange = { remoteLookup = it }
-                )
-                Text(
-                    text = stringResource(R.string.m3u_ytm_lookup),
-                    color = MaterialTheme.colorScheme.secondary,
-                    fontSize = 14.sp
-                )
-            }
-
-            Row(
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp)
-            ) {
-                if (isLoading) {
-                    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(80.dp)) {
-                        Text(
-                            text = "$percentage%",
-                            fontSize = 14.sp,
-                        )
-                        CircularProgressIndicator(
-                            strokeWidth = 3.dp,
-                            modifier = Modifier.size(40.dp)
-                        )
-                    }
-                }
-
-                Button(
-                    onClick = {
-                        importedSongs.clear()
-                        rejectedSongs.clear()
-                        importM3uLauncher.launch(arrayOf("audio/*"))
-                    },
-                    enabled = !isLoading
+        TopAppBar(
+            title = { Text(stringResource(R.string.import_playlist)) },
+            navigationIcon = {
+                IconButton(
+                    onClick = navController::navigateUp,
+                    onLongClick = navController::backToMain
                 ) {
-                    Text(stringResource(R.string.m3u_import_playlist))
+                    Icon(
+                        Icons.AutoMirrored.Rounded.ArrowBack,
+                        contentDescription = null
+                    )
+                }
+            },
+            windowInsets = TopBarInsets,
+        )
+        EnumListPreference(
+            title = { Text(stringResource(R.string.scanner_sensitivity_title)) },
+            icon = { Icon(Icons.Rounded.GraphicEq, null) },
+            selectedValue = scannerSensitivity,
+            onValueSelected = { scannerSensitivity = it },
+            valueText = {
+                when (it) {
+                    ScannerM3uMatchCriteria.LEVEL_0 -> stringResource(R.string.scanner_sensitivity_L0)
+                    ScannerM3uMatchCriteria.LEVEL_1 -> stringResource(R.string.scanner_sensitivity_L1)
+                    ScannerM3uMatchCriteria.LEVEL_2 -> stringResource(R.string.scanner_sensitivity_L2)
                 }
             }
+        )
 
-            if (importedSongs.isNotEmpty()) {
-                DropDownResults(
-                    title = "${stringResource(R.string.import_success_songs)} (${importedSongs.size})",
-                    items = importedSongs.map { (_, song) -> song.title },
-                    state = importedListState,
-                    songs = importedSongs,
-                    searchId = searchId,
-                    expanded = importedExpanded
-                )
-            }
-
-            if (rejectedSongs.isNotEmpty()) {
-                val emptyMutableList: MutableList<Pair<String, Song>> = mutableListOf()
-                DropDownResults(
-                    title = "${stringResource(R.string.import_failed_songs)} (${rejectedSongs.size})",
-                    items = rejectedSongs,
-                    state = rejectedListState,
-                    songs = emptyMutableList,
-                    searchId = null,
-                    expanded = rejectedExpanded
-                )
-            }
-            if (searchId.value != null && searchId.value!!.first) {
-                val route = "search_rep/${Uri.encode(importedSongs.map {(query, _ ) -> query}[searchId.value!!.second])}?rep=true"
-                navController.navigate(route)
-                searchId.value = Pair(false, searchId.value!!.second)
-            }
-            if (replaceSong.value != null && searchId.value != null) {
-                val prevSongQuery = importedSongs[searchId.value!!.second].first
-                importedSongs[searchId.value!!.second] = Pair(prevSongQuery, replaceSong.value) as Pair<String, Song>
-                replaceSong.value = null
-            }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(
+                checked = remoteLookup,
+                onCheckedChange = { remoteLookup = it }
+            )
+            Text(
+                text = stringResource(R.string.m3u_ytm_lookup),
+                color = MaterialTheme.colorScheme.secondary,
+                fontSize = 14.sp
+            )
         }
-        // Bottom buttons
 
         Row(
             horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
         ) {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(android.R.string.cancel))
+            if (isLoading) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.size(80.dp)) {
+                    Text(
+                        text = "$percentage%",
+                        fontSize = 14.sp,
+                    )
+                    CircularProgressIndicator(
+                        strokeWidth = 3.dp,
+                        modifier = Modifier.size(40.dp)
+                    )
+                }
             }
 
             TextButton(
                 onClick = { showChoosePlaylistDialog = true },
-                enabled = importedSongs.isNotEmpty()
+                enabled = viewModel.importedSongs.isNotEmpty()
             ) {
                 Text(stringResource(R.string.add_to_playlist))
             }
+
+            Button(
+                onClick = {
+                    importM3uLauncher.launch(arrayOf("audio/*"))
+                },
+                enabled = !isLoading
+            ) {
+                Text(stringResource(R.string.m3u_import_playlist))
+            }
         }
+
+        if (viewModel.importedSongs.isNotEmpty()) {
+            DropDownResults(
+                title = "${stringResource(R.string.import_success_songs)} (${viewModel.importedSongs.size})",
+                items = viewModel.importedSongs.map { (_, song) -> song.title },
+                state = importedListState,
+                songs = viewModel.importedSongs,
+                searchId = searchId,
+                expanded = importedExpanded
+            )
+        }
+
+        if (viewModel.rejectedSongs.isNotEmpty()) {
+            val emptyMutableList: MutableList<Pair<String, Song>> = mutableListOf()
+            DropDownResults(
+                title = "${stringResource(R.string.import_failed_songs)} (${viewModel.rejectedSongs.size})",
+                items = viewModel.rejectedSongs,
+                state = rejectedListState,
+                songs = emptyMutableList,
+                searchId = null,
+                expanded = rejectedExpanded
+            )
+        }
+
+        if (searchId.value != null && searchId.value!!.first) {
+            val route =
+                "search_rep/${Uri.encode(viewModel.importedSongs.map { (query, _) -> query }[searchId.value!!.second])}?rep=true"
+            navController.navigate(route)
+            searchId.value = Pair(false, searchId.value!!.second)
+        }
+
+        if (replaceSong.value != null && searchId.value != null) {
+            val prevSongQuery = viewModel.importedSongs[searchId.value!!.second].first
+            viewModel.importedSongs[searchId.value!!.second] =
+                Pair(prevSongQuery, replaceSong.value) as Pair<String, Song>
+            replaceSong.value = null
+        }
+
     }
-
-
-    /**
-     * ---------------------------
-     * Dialogs
-     * ---------------------------
-     */
 
     if (showChoosePlaylistDialog) {
         AddToPlaylistDialog(
             navController = navController,
             allowSyncing = false,
             initialTextFieldValue = importedTitle,
-            songIds = importedSongs.map { (_, song) -> song.id },
+            songIds = viewModel.importedSongs.map { (_, song) -> song.id },
             onPreAdd = {
-                importedSongs.map{(_, song) -> song}.forEach {
+                viewModel.importedSongs.map { (_, song) -> song }.forEach {
                     database.insert(it.toMediaMetadata())
                 }
                 emptyList()
             },
             onDismiss = { showChoosePlaylistDialog = false }
         )
-
     }
-
-
 }
+
 
 /**
  * Parse m3u file and scans the database for matching songs
@@ -419,7 +415,7 @@ suspend fun loadM3u(
     val unorderedSongs = ArrayList<Triple<Int, String, Song>>()
     val unorderedRejectedSongs = ArrayList<Pair<Int, String>>()
 
-    val scope = CoroutineScope(Dispatchers.Main)
+    val scope = CoroutineScope(Dispatchers.IO)
 
     var songs = ArrayList<Pair<String, Song>>()
     var rejectedSongs = ArrayList<String>()

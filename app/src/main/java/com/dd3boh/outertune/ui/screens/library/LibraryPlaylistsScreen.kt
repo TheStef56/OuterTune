@@ -86,7 +86,6 @@ import com.dd3boh.outertune.ui.component.SortHeader
 import com.dd3boh.outertune.ui.component.items.AutoPlaylistGridItem
 import com.dd3boh.outertune.ui.component.items.AutoPlaylistListItem
 import com.dd3boh.outertune.ui.dialog.CreatePlaylistDialog
-import com.dd3boh.outertune.ui.dialog.ImportM3uDialog
 import com.dd3boh.outertune.ui.menu.ActionDropdown
 import com.dd3boh.outertune.ui.menu.DropdownItem
 import com.dd3boh.outertune.ui.utils.MEDIA_PERMISSION_LEVEL
@@ -130,7 +129,6 @@ fun LibraryPlaylistsScreen(
     val backStackEntry by navController.currentBackStackEntryAsState()
     val scrollToTop = backStackEntry?.savedStateHandle?.getStateFlow("scrollToTop", false)?.collectAsState()
 
-    var showImportM3uDialog by rememberSaveable { mutableStateOf(false) }
     var showCreatePlaylistDialog by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { viewModel.syncPlaylists() }
@@ -256,7 +254,7 @@ fun LibraryPlaylistsScreen(
                         DropdownItem(
                             title = stringResource(R.string.import_playlist),
                             leadingIcon = { Icon(Icons.AutoMirrored.Rounded.Input, null) },
-                            action = { showImportM3uDialog = true }
+                            action = { navController.navigate("importM3u") }
                         ),
                     ),
                 )
@@ -451,14 +449,6 @@ fun LibraryPlaylistsScreen(
         /**
          * Dialog
          */
-
-        if (showImportM3uDialog) {
-            ImportM3uDialog(
-                navController = navController,
-                replaceSong = replaceSong,
-                onDismiss = { showImportM3uDialog = false }
-            )
-        }
 
         Indicator(
             isRefreshing = isSyncingRemotePlaylists,
