@@ -75,12 +75,16 @@ import com.dd3boh.outertune.utils.lmScannerCoroutine
 import com.dd3boh.outertune.utils.reportException
 import com.dd3boh.outertune.utils.scanners.LocalMediaScanner
 import com.dd3boh.outertune.utils.scanners.LocalMediaScanner.Companion.compareM3uSong
+import com.zionhuang.innertube.YouTube
+import com.zionhuang.innertube.models.SongItem
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.io.InputStream
+import kotlin.collections.distinctBy
+import kotlin.collections.orEmpty
 
 fun clampText(string: String, maxLength: Int): String {
     return if (string.length > maxLength && !string.contains("EXTINF")) {
@@ -172,7 +176,7 @@ fun DropDownResults(
                         }
                     }
                 }
-                Spacer(Modifier.width(15.dp))
+                Spacer(Modifier.width(70.dp))
                 LazyColumnScrollbar(
                     state = state,
                     modifier = Modifier
@@ -474,6 +478,21 @@ suspend fun loadM3u(
                             // do not search for local songs
                             val query = "$title ${Uri.decode(artists.joinToString(" "))}"
                             if (searchOnline && matches.isEmpty() && source?.contains(',') == false) {
+                                val suggestions = YouTube.searchSuggestions(query).getOrNull()
+                                val suggestionSongs = suggestions?.recommendedItems.orEmpty().distinctBy { it.id }.filter{it is SongItem}
+                                suggestionSongs.forEach { suggestion ->
+                                    val song = (suggestion as SongItem).toMediaMetadata()
+                                    val result = Song(
+                                        song = song.toSongEntity(),
+                                        artists = song.artists.map {
+                                            ArtistEntity(
+                                                id = it.id ?: ArtistEntity.generateArtistId(),
+                                                name = it.name
+                                            )
+                                        }
+                                    )
+                                    matches.add(result)
+                                }
                                 val onlineResult =
                                     LocalMediaScanner.youtubeSongLookup(query, source)
                                 onlineResult.forEach { result ->
@@ -489,6 +508,7 @@ suspend fun loadM3u(
                                     matches.add(result)
                                 }
                             }
+                            matches.distinctBy { it.id }
                             val oldSize = unorderedSongs.size
                             var foundOne =
                                 false // TODO: Eventually the user can pick from matches... eventually...

@@ -10,11 +10,14 @@ import androidx.lifecycle.viewModelScope
 import com.dd3boh.outertune.models.ItemsPage
 import com.dd3boh.outertune.utils.reportException
 import com.zionhuang.innertube.YouTube
+import com.zionhuang.innertube.models.SongItem
 import com.zionhuang.innertube.pages.SearchSummaryPage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.collections.distinctBy
+import kotlin.collections.orEmpty
 
 @HiltViewModel
 class OnlineSearchViewModel @Inject constructor(
@@ -30,10 +33,13 @@ class OnlineSearchViewModel @Inject constructor(
         viewModelScope.launch {
             if (route) {
                 if (viewStateMap[YouTube.SearchFilter.FILTER_SONG.value] == null) {
+                    val suggestions = YouTube.searchSuggestions(query).getOrNull()
+                    val items = suggestions?.recommendedItems.orEmpty().distinctBy { it.id }.filter{it is SongItem}.toMutableList()
                     YouTube.search(query, YouTube.SearchFilter.FILTER_SONG)
                         .onSuccess { result ->
+                            items += result.items
                             viewStateMap[YouTube.SearchFilter.FILTER_SONG.value] =
-                                ItemsPage(result.items.distinctBy { it.id }, result.continuation)
+                                ItemsPage(items.distinctBy { it.id }, result.continuation)
                         }
                         .onFailure {
                             reportException(it)
