@@ -1021,6 +1021,7 @@ class MainActivity : ComponentActivity() {
                                     composable("importM3u") {
                                         ImportM3uScreen(
                                             navController = navController,
+                                            scrollBehavior = scrollBehavior,
                                             replaceSong = replaceSong
                                         )
                                     }

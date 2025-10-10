@@ -11,8 +11,10 @@ import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,21 +34,34 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Input
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.Input
+import androidx.compose.material.icons.filled.Input
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.GraphicEq
+import androidx.compose.material.icons.rounded.Input
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarScrollBehavior
+import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -54,12 +69,21 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -73,6 +97,7 @@ import com.dd3boh.outertune.LocalPlayerAwareWindowInsets
 import com.dd3boh.outertune.LocalPlayerConnection
 import com.dd3boh.outertune.LocalSnackbarHostState
 import com.dd3boh.outertune.R
+import com.dd3boh.outertune.constants.AlbumThumbnailSize
 import com.dd3boh.outertune.constants.ListThumbnailSize
 import com.dd3boh.outertune.constants.ScannerM3uMatchCriteria
 import com.dd3boh.outertune.constants.ThumbnailCornerRadius
@@ -84,13 +109,17 @@ import com.dd3boh.outertune.db.entities.SongEntity
 import com.dd3boh.outertune.extensions.togglePlayPause
 import com.dd3boh.outertune.models.toMediaMetadata
 import com.dd3boh.outertune.playback.queues.ListQueue
+import com.dd3boh.outertune.ui.component.AutoResizeText
 import com.dd3boh.outertune.ui.component.EnumListPreference
+import com.dd3boh.outertune.ui.component.FontSizeRange
 import com.dd3boh.outertune.ui.component.LazyColumnScrollbar
 import com.dd3boh.outertune.ui.component.button.IconButton
+import com.dd3boh.outertune.ui.component.button.IconTextButton
 import com.dd3boh.outertune.ui.component.items.Icon
 import com.dd3boh.outertune.ui.component.items.ItemThumbnail
 import com.dd3boh.outertune.ui.component.items.ListItem
 import com.dd3boh.outertune.ui.dialog.AddToPlaylistDialog
+import com.dd3boh.outertune.ui.dialog.DefaultDialog
 import com.dd3boh.outertune.ui.utils.backToMain
 import com.dd3boh.outertune.utils.joinByBullet
 import com.dd3boh.outertune.utils.lmScannerCoroutine
@@ -119,6 +148,7 @@ import kotlin.text.substringBefore
 @Composable
 fun ImportM3uScreen(
     navController: NavController,
+    scrollBehavior: TopAppBarScrollBehavior,
     replaceSong: MutableState<Song?>,
     viewModel: ImportM3uViewModel = viewModel ()
 ) {
@@ -142,9 +172,19 @@ fun ImportM3uScreen(
         LazyListState()
     }
 
+    var isSearching by rememberSaveable {mutableStateOf(false)}
+
+    val focusRequester = remember { FocusRequester() }
+
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+
     val playerConnection = LocalPlayerConnection.current
 
     var percentage by rememberSaveable { mutableIntStateOf(0) }
+
+    var showOptions by remember {mutableStateOf(false)}
+
+    val title = stringResource(R.string.import_playlist)
 
     val importM3uLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         CoroutineScope(lmScannerCoroutine).launch {
@@ -187,215 +227,227 @@ fun ImportM3uScreen(
 
     val padding = LocalPlayerAwareWindowInsets.current.asPaddingValues()
 
-    LazyColumn(
-        state = mainListState,
-        contentPadding = PaddingValues(
-            start = padding.calculateStartPadding(LayoutDirection.Ltr),
-            top = 0.dp,
-            bottom = padding.calculateBottomPadding(),
-            end = padding.calculateEndPadding(LayoutDirection.Ltr)
-        ),
+    if (isSearching) {
+        BackHandler {
+            isSearching = false
+        }
+    }
+
+    if (showOptions) {
+        DefaultDialog(
+            onDismiss = { showOptions = false },
+            icon = { Icon(Icons.Rounded.Settings, null) },
+            title = { Text(stringResource(R.string.options)) },
+        ) {
+            EnumListPreference(
+                title = { Text(stringResource(R.string.scanner_sensitivity_title)) },
+                icon = { Icon(Icons.Rounded.GraphicEq, null) },
+                selectedValue = scannerSensitivity,
+                onValueSelected = { scannerSensitivity = it },
+                valueText = {
+                    when (it) {
+                        ScannerM3uMatchCriteria.LEVEL_0 -> stringResource(R.string.scanner_sensitivity_L0)
+                        ScannerM3uMatchCriteria.LEVEL_1 -> stringResource(R.string.scanner_sensitivity_L1)
+                        ScannerM3uMatchCriteria.LEVEL_2 -> stringResource(R.string.scanner_sensitivity_L2)
+                    }
+                }
+            )
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Checkbox(
+                    checked = remoteLookup,
+                    onCheckedChange = { remoteLookup = it }
+                )
+                Text(
+                    stringResource(R.string.m3u_ytm_lookup), color = MaterialTheme.colorScheme.secondary,
+                    fontSize = 14.sp
+                )
+            }
+        }
+    }
+
+    Column (
         modifier = Modifier
             .fillMaxSize()
-    ) {
-        item {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                TopAppBar(
-                    title = { Text(stringResource(R.string.import_playlist)) },
-                    navigationIcon = {
-                        IconButton(
-                            onClick = navController::navigateUp,
-                            onLongClick = navController::backToMain
-                        ) {
-                            Icon(
-                                Icons.AutoMirrored.Rounded.ArrowBack,
-                                contentDescription = null
+    ){
+        TopAppBar(
+            title = {
+                if (isSearching) {
+                    TextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = {
+                            Text(
+                                text = stringResource(R.string.search),
+                                style = MaterialTheme.typography.titleLarge
                             )
-                        }
-                    },
-                    windowInsets = TopBarInsets,
-                )
-                EnumListPreference(
-                    title = { Text(stringResource(R.string.scanner_sensitivity_title)) },
-                    icon = { Icon(Icons.Rounded.GraphicEq, null) },
-                    selectedValue = scannerSensitivity,
-                    onValueSelected = { scannerSensitivity = it },
-                    valueText = {
-                        when (it) {
-                            ScannerM3uMatchCriteria.LEVEL_0 -> stringResource(R.string.scanner_sensitivity_L0)
-                            ScannerM3uMatchCriteria.LEVEL_1 -> stringResource(R.string.scanner_sensitivity_L1)
-                            ScannerM3uMatchCriteria.LEVEL_2 -> stringResource(R.string.scanner_sensitivity_L2)
-                        }
-                    }
-                )
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
-                        checked = remoteLookup,
-                        onCheckedChange = { remoteLookup = it }
-                    )
-                    Text(
-                        text = stringResource(R.string.m3u_ytm_lookup),
-                        color = MaterialTheme.colorScheme.secondary,
-                        fontSize = 14.sp
+                        },
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.titleLarge,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            disabledIndicatorColor = Color.Transparent,
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(focusRequester)
                     )
                 }
+            },
+            actions = {
+                if (!isSearching) {
+                    IconButton(
+                        onClick = {
+                            isSearching = true
+                        }
+                    ) {
+                        Icon(
+                            Icons.Rounded.Search,
+                            contentDescription = null
+                        )
+                    }
+                }
+            },
+            navigationIcon = {
+                IconButton(
+                    onClick = navController::navigateUp,
+                    onLongClick = navController::backToMain
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Rounded.ArrowBack,
+                        contentDescription = null
+                    )
+                }
+            },
+            windowInsets = TopBarInsets,
+        )
 
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
+        LazyColumn(
+            state = mainListState,
+            contentPadding = PaddingValues(
+                start = padding.calculateStartPadding(LayoutDirection.Ltr),
+                top = 0.dp,
+                bottom = padding.calculateBottomPadding(),
+                end = padding.calculateEndPadding(LayoutDirection.Ltr)
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+        ) {
+            item {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 8.dp)
+                        .padding(16.dp)
                 ) {
-                    TextButton(
-                        onClick = { showChoosePlaylistDialog = true },
-                        enabled = viewModel.importedSongs.isNotEmpty()
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
                     ) {
-                        Text(stringResource(R.string.add_to_playlist))
+                        Box(
+                            modifier = Modifier
+                                .size(AlbumThumbnailSize)
+                                .background(
+                                    MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp),
+                                    shape = RoundedCornerShape(ThumbnailCornerRadius)
+                                )
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Rounded.Input,
+                                contentDescription = null,
+                                tint = LocalContentColor.current.copy(alpha = 0.8f),
+                                modifier = Modifier
+                                    .size(AlbumThumbnailSize / 2 + 16.dp)
+                                    .align(Alignment.Center)
+                            )
+                        }
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            AutoResizeText(
+                                text = title,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                fontSizeRange = FontSizeRange(16.sp, 22.sp)
+                            )
+                            TextButton(
+                                onClick = { showOptions = true },
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Settings,
+                                    contentDescription = null
+                                )
+                                Text(stringResource(R.string.settings))
+                            }
+                        }
                     }
 
-                    Spacer(Modifier.width(8.dp))
-
-                    TextButton(
-                        onClick = {
-                            importM3uLauncher.launch(arrayOf("audio/*"))
-                        },
-                        enabled = !isLoading
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp)
                     ) {
-                        Text(stringResource(R.string.m3u_import_playlist))
+                        Button(
+                            onClick = { showChoosePlaylistDialog = true },
+                            enabled = viewModel.importedSongs.isNotEmpty()
+                        ) {
+                            Text(stringResource(R.string.add_to_playlist))
+                        }
+
+                        Spacer(Modifier.width(8.dp))
+
+                        Button(
+                            onClick = {
+                                importM3uLauncher.launch(arrayOf("audio/*"))
+                            },
+                            enabled = !isLoading
+                        ) {
+                            Text(stringResource(R.string.m3u_import_playlist))
+                        }
                     }
+
                 }
-
             }
-        }
 
-        if (isLoading) {
-            item {
-                Box (
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(top = 150.dp)
-
-                ) {
-                    Box(
+            if (isLoading) {
+                item {
+                    Box (
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
-                            .size(80.dp)
+                            .fillMaxSize()
+                            .padding(top = 150.dp)
+
                     ) {
-                        Text(
-                            text = "$percentage%",
-                            fontSize = 24.sp,
-                        )
-                        CircularProgressIndicator(
-                            strokeWidth = 4.dp,
-                            modifier = Modifier.size(120.dp)
-                        )
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(80.dp)
+                        ) {
+                            Text(
+                                text = "$percentage%",
+                                fontSize = 24.sp,
+                            )
+                            CircularProgressIndicator(
+                                strokeWidth = 4.dp,
+                                modifier = Modifier.size(120.dp)
+                            )
+                        }
                     }
                 }
             }
-        }
 
-        if (viewModel.importedSongs.isNotEmpty()) {
-            item {
-                Box (
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 6.dp)
-                ) {
-                    Text("${stringResource(R.string.import_success_songs)} (${viewModel.importedSongs.size})")
-                }
-            }
-            itemsIndexed(
-                items = viewModel.importedSongs.map { (_, song) -> song },
-                key = { index, song -> index.hashCode() + song.hashCode() }
-            ) { index, song ->
-                ListItem(
-                    title = song.song.title,
-                    subtitle = joinByBullet(
-                        (if (BuildConfig.DEBUG) song.song.id else ""),
-                        song.artists.joinToString { it.name },
-                        makeTimeString(song.song.duration * 1000L)
-                    ),
-                    badges = {
-                        if (song.song.liked) {
-                            Icon.Favorite()
-                        }
-                        if (song.song.isLocal) {
-                            Icon.FolderCopy()
-                        } else if (song.song.inLibrary != null) {
-                            Icon.Library()
-                        }
-                        if (LocalDownloadUtil.current.getCustomDownload(song.id)) {
-                            Icon.Download(Download.STATE_COMPLETED)
-                        } else {
-                            val download by LocalDownloadUtil.current.getDownload(song.id)
-                                .collectAsState(initial = null)
-                            Icon.Download(download?.state)
-                        }
-                    },
-                    thumbnailContent = {
-                        ItemThumbnail(
-                            thumbnailUrl = if (song.song.isLocal) song.song.localPath else song.song.thumbnailUrl,
-                            isActive = false,
-                            isPlaying = false,
-                            shape = RoundedCornerShape(ThumbnailCornerRadius),
-                            modifier = Modifier.size(ListThumbnailSize)
-                        )
-                    },
-                    trailingContent = {
-                        IconButton(
-                            onClick = {
-                                viewModel.importedSongs.removeAt(index)
-                            }
-                        ) {
-                            Icon(
-                                Icons.Rounded.Delete,
-                                contentDescription = null
-                            )
-                        }
-
-                        IconButton(
-                            onClick = {
-                                searchId = index
-                                val route =
-                                    "search_rep/${Uri.encode(viewModel.importedSongs.map { (query, _) -> query }[searchId])}?rep=true"
-                                navController.navigate(route)
-                            }
-                        ) {
-                            Icon(
-                                Icons.Rounded.Edit,
-                                contentDescription = null
-                            )
-                        }
-
-
-                    },
-                    isSelected = false,
-                    isActive = LocalPlayerConnection.current?.mediaMetadata?.collectAsState()?.value?.id == song.id,
-                    modifier = Modifier.combinedClickable(
-                        onClick = {
-                            if (song.id == playerConnection?.mediaMetadata?.value?.id) {
-                                playerConnection.player.togglePlayPause()
-                            } else {
-                                playerConnection?.playQueue(
-                                    ListQueue(
-                                        items = List(1) { song.toMediaMetadata() },
-                                        startIndex = 0,
-                                    )
-                                )
-                            }
-                        },
-                    )
-                )
-            }
-            if (viewModel.rejectedSongs.isNotEmpty()) {
+            if (viewModel.importedSongs.isNotEmpty()) {
                 item {
                     Box (
                         contentAlignment = Alignment.Center,
@@ -403,11 +455,11 @@ fun ImportM3uScreen(
                             .fillMaxWidth()
                             .padding(bottom = 6.dp)
                     ) {
-                        Text("${stringResource(R.string.import_failed_songs)} (${viewModel.rejectedSongs.size})")
+                        Text("${stringResource(R.string.import_success_songs)} (${viewModel.importedSongs.size})")
                     }
                 }
                 itemsIndexed(
-                    items = viewModel.rejectedSongs.map { (_, song) -> song },
+                    items = viewModel.importedSongs.map { (_, song) -> song },
                     key = { index, song -> index.hashCode() + song.hashCode() }
                 ) { index, song ->
                     ListItem(
@@ -417,20 +469,114 @@ fun ImportM3uScreen(
                             song.artists.joinToString { it.name },
                             makeTimeString(song.song.duration * 1000L)
                         ),
-                        thumbnailContent = {},
-                        trailingContent = {},
+                        badges = {
+                            if (song.song.liked) {
+                                Icon.Favorite()
+                            }
+                            if (song.song.isLocal) {
+                                Icon.FolderCopy()
+                            } else if (song.song.inLibrary != null) {
+                                Icon.Library()
+                            }
+                            if (LocalDownloadUtil.current.getCustomDownload(song.id)) {
+                                Icon.Download(Download.STATE_COMPLETED)
+                            } else {
+                                val download by LocalDownloadUtil.current.getDownload(song.id)
+                                    .collectAsState(initial = null)
+                                Icon.Download(download?.state)
+                            }
+                        },
+                        thumbnailContent = {
+                            ItemThumbnail(
+                                thumbnailUrl = if (song.song.isLocal) song.song.localPath else song.song.thumbnailUrl,
+                                isActive = false,
+                                isPlaying = false,
+                                shape = RoundedCornerShape(ThumbnailCornerRadius),
+                                modifier = Modifier.size(ListThumbnailSize)
+                            )
+                        },
+                        trailingContent = {
+                            IconButton(
+                                onClick = {
+                                    viewModel.importedSongs.removeAt(index)
+                                }
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Delete,
+                                    contentDescription = null
+                                )
+                            }
+
+                            IconButton(
+                                onClick = {
+                                    searchId = index
+                                    val route =
+                                        "search_rep/${Uri.encode(viewModel.importedSongs.map { (query, _) -> query }[searchId])}?rep=true"
+                                    navController.navigate(route)
+                                }
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Edit,
+                                    contentDescription = null
+                                )
+                            }
+
+
+                        },
                         isSelected = false,
-                        isActive = false,
+                        isActive = LocalPlayerConnection.current?.mediaMetadata?.collectAsState()?.value?.id == song.id,
+                        modifier = Modifier.combinedClickable(
+                            onClick = {
+                                if (song.id == playerConnection?.mediaMetadata?.value?.id) {
+                                    playerConnection.player.togglePlayPause()
+                                } else {
+                                    playerConnection?.playQueue(
+                                        ListQueue(
+                                            items = List(1) { song.toMediaMetadata() },
+                                            startIndex = 0,
+                                        )
+                                    )
+                                }
+                            },
+                        )
                     )
+                }
+                if (viewModel.rejectedSongs.isNotEmpty()) {
+                    item {
+                        Box (
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 6.dp)
+                        ) {
+                            Text("${stringResource(R.string.import_failed_songs)} (${viewModel.rejectedSongs.size})")
+                        }
+                    }
+                    itemsIndexed(
+                        items = viewModel.rejectedSongs.map { (_, song) -> song },
+                        key = { index, song -> index.hashCode() + song.hashCode() }
+                    ) { index, song ->
+                        ListItem(
+                            title = song.song.title,
+                            subtitle = joinByBullet(
+                                (if (BuildConfig.DEBUG) song.song.id else ""),
+                                song.artists.joinToString { it.name },
+                                makeTimeString(song.song.duration * 1000L)
+                            ),
+                            thumbnailContent = {},
+                            trailingContent = {},
+                            isSelected = false,
+                            isActive = false,
+                        )
+                    }
                 }
             }
         }
+
+        LazyColumnScrollbar(
+            state = mainListState,
+        )
     }
-
-
-    LazyColumnScrollbar(
-        state = mainListState,
-    )
 
     if (showChoosePlaylistDialog) {
         AddToPlaylistDialog(
