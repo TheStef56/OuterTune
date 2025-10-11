@@ -11,6 +11,7 @@ package com.dd3boh.outertune.utils.scanners
 import android.content.Context
 import android.media.MediaPlayer
 import android.net.Uri
+import android.provider.ContactsContract
 import android.util.Log
 import androidx.compose.ui.util.fastDistinctBy
 import androidx.compose.ui.util.fastFilter
@@ -62,6 +63,7 @@ import java.io.FileNotFoundException
 import java.io.IOException
 import java.time.LocalDateTime
 import java.util.Locale
+import kotlin.coroutines.cancellation.CancellationException
 
 class LocalMediaScanner(val context: Context, val scannerImpl: ScannerImpl) {
     private val TAG = LocalMediaScanner::class.simpleName.toString()
@@ -1159,7 +1161,7 @@ class LocalMediaScanner(val context: Context, val scannerImpl: ScannerImpl) {
                 if (SCANNER_DEBUG)
                     Log.v(TAG, "Remote song: ${foundSong.firstOrNull()?.title} [${foundSong.firstOrNull()?.id}]")
             }.onFailure {
-                throw Exception("Failed to search on YouTube Music: ${it.message}")
+                if (it !is CancellationException) throw Exception("Failed to search on YouTube Music: ${it.message}")
             }
 
             return ytmResult

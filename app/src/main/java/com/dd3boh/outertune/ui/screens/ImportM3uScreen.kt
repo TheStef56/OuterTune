@@ -10,6 +10,7 @@ package com.dd3boh.outertune.ui.screens
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -66,6 +67,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
@@ -129,7 +131,9 @@ import com.dd3boh.outertune.ui.component.items.ListItem
 import com.dd3boh.outertune.ui.dialog.AddToPlaylistDialog
 import com.dd3boh.outertune.ui.dialog.DefaultDialog
 import com.dd3boh.outertune.ui.menu.SongMenu
+import com.dd3boh.outertune.ui.screens.playlist.PlaylistType
 import com.dd3boh.outertune.ui.utils.backToMain
+import com.dd3boh.outertune.ui.utils.getNSongsString
 import com.dd3boh.outertune.utils.joinByBullet
 import com.dd3boh.outertune.utils.lmScannerCoroutine
 import com.dd3boh.outertune.utils.makeTimeString
@@ -139,11 +143,15 @@ import com.dd3boh.outertune.utils.scanners.LocalMediaScanner.Companion.compareM3
 import com.dd3boh.outertune.viewmodels.ImportM3uViewModel
 import com.zionhuang.innertube.YouTube
 import com.zionhuang.innertube.models.SongItem
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import java.io.InputStream
@@ -212,13 +220,31 @@ fun ImportM3uScreen(
 
     var showEditOptions by remember { mutableStateOf(false) }
 
-    val importM3uLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        CoroutineScope(lmScannerCoroutine).launch {
+    // Create a Job that represents all running work for this screen
+    val importJob = remember { SupervisorJob() }
+
+    // Create a CoroutineScope that’s tied to this screen
+    val importScope = remember {
+        CoroutineScope(importJob + Dispatchers.IO)
+    }
+
+    // Cancel all running work when leaving the page
+    DisposableEffect(Unit) {
+        onDispose {
+            importJob.cancel()  // 💥 nukes every launched coroutine
+        }
+    }
+
+    val importM3uLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        isLoading = true
+        importScope.launch {
             try {
-                isLoading = true
                 if (uri != null) {
                     viewModel.importedSongs.clear()
                     viewModel.rejectedSongs.clear()
+
                     val result = loadM3u(
                         context = context,
                         database = database,
@@ -232,10 +258,7 @@ fun ImportM3uScreen(
                     )
                     viewModel.importedSongs.addAll(result.first)
                     viewModel.rejectedSongs.addAll(result.second)
-                    importedTitle = result.third
                 }
-            } catch (e: Exception) {
-                reportException(e)
             } finally {
                 isLoading = false
             }
@@ -439,7 +462,7 @@ fun ImportM3uScreen(
                             )
                         }
                         Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
+                            horizontalAlignment = Alignment.Start
                         ) {
                             AutoResizeText(
                                 text = title,
@@ -447,6 +470,16 @@ fun ImportM3uScreen(
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
                                 fontSizeRange = FontSizeRange(16.sp, 22.sp)
+                            )
+                            Text(
+                                text = "Imported (${viewModel.importedSongs.size})",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Normal
+                            )
+                            Text(
+                                text = "Not found (${viewModel.rejectedSongs.size})",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Normal
                             )
                             TextButton(
                                 onClick = { showOptions = true },
@@ -517,16 +550,6 @@ fun ImportM3uScreen(
             }
 
             if (viewModel.importedSongs.isNotEmpty()) {
-                item {
-                    Box (
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 6.dp)
-                    ) {
-                        Text("${stringResource(R.string.import_success_songs)} (${viewModel.importedSongs.size})")
-                    }
-                }
                 itemsIndexed(
                     items = viewModel.importedSongs.map { (_, song, uuid) -> Pair(song, uuid) },
                     key = { _, (_, uuid) -> uuid }
@@ -616,16 +639,6 @@ fun ImportM3uScreen(
                     }
                 }
                 if (viewModel.rejectedSongs.isNotEmpty()) {
-                    item {
-                        Box (
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 6.dp)
-                        ) {
-                            Text("${stringResource(R.string.import_failed_songs)} (${viewModel.rejectedSongs.size})")
-                        }
-                    }
                     itemsIndexed(
                         items = viewModel.rejectedSongs.map { (_, song) -> song },
                         key = { index, song -> index.hashCode() + song.hashCode() }
@@ -688,11 +701,9 @@ suspend fun loadM3u(
     matchStrength: ScannerM3uMatchCriteria = ScannerM3uMatchCriteria.LEVEL_1,
     searchOnline: Boolean = false,
     onPercentageChange: (Int) -> Unit
-): Triple<ArrayList<Triple<String, Song, String>>, ArrayList<Pair<Int, Song>>, String> {
+): Triple<ArrayList<Triple<String, Song, String>>, ArrayList<Pair<Int, Song>>, String> = withContext(Dispatchers.IO) {
     val unorderedSongs = ArrayList<Triple<Int, String, Song>>()
     val unorderedRejectedSongs = ArrayList<Pair<Int, Song>>()
-
-    val scope = CoroutineScope(Dispatchers.IO)
 
     var songs = ArrayList<Triple<String, Song, String>>()
     var rejectedSongs = ArrayList<Pair<Int, Song>>()
@@ -704,107 +715,110 @@ suspend fun loadM3u(
             val lines = stream.readLines()
             if (lines.isEmpty()) return@runCatching
             if (lines.first().startsWith("#EXTM3U")) {
-                toProcess = lines.size/2
-                lines.forEachIndexed { index, rawLine ->
-                    scope.launch {
-                        if (rawLine.startsWith("#EXTINF:")) {
-                            val artists =
-                                rawLine.substringAfter("#EXTINF:").substringAfter(',')
-                                    .substringBefore(" - ").split(';')
-                            val title = rawLine.substringAfter("#EXTINF:").substringAfter(',')
-                                .substringAfter(" - ")
-                            val source = if (index + 1 < lines.size) lines[index + 1] else null
+                toProcess = lines.size / 2
+                coroutineScope {
+                    lines.forEachIndexed { index, rawLine ->
+                        launch {
+                            if (rawLine.startsWith("#EXTINF:")) {
+                                val artists =
+                                    rawLine.substringAfter("#EXTINF:").substringAfter(',')
+                                        .substringBefore(" - ").split(';')
+                                val title = rawLine.substringAfter("#EXTINF:").substringAfter(',')
+                                    .substringAfter(" - ")
+                                val source = if (index + 1 < lines.size) lines[index + 1] else null
 
-                            val mockSong = Song(
-                                song = SongEntity(
-                                    id = "",
-                                    title = title,
-                                    isLocal = true,
-                                    localPath = if (source?.startsWith("http") == false) source.substringAfter(
-                                        ','
-                                    ) else null
-                                ),
-                                artists = artists.map { ArtistEntity("", it) },
-                            )
+                                val mockSong = Song(
+                                    song = SongEntity(
+                                        id = "",
+                                        title = title,
+                                        isLocal = true,
+                                        localPath = if (source?.startsWith("http") == false) source.substringAfter(
+                                            ','
+                                        ) else null
+                                    ),
+                                    artists = artists.map { ArtistEntity("", it) },
+                                )
 
-                            // now find the best match
-                            // first, search for songs in the database. Supplement with remote songs if no results are found
-                            val matches = if (source == null) {
-                                database.searchSongsInDb(title).first().toMutableList()
-                            } else {
-                                // local songs have a source format of "<id>, <path>", YTM songs have "<url>
-                                var id = source.substringBefore(',')
-                                if (id.isEmpty()) {
-                                    id = source.substringAfter("watch?").substringAfter("=")
-                                        .substringBefore('?')
+                                // now find the best match
+                                // first, search for songs in the database. Supplement with remote songs if no results are found
+                                val matches = if (source == null) {
+                                    database.searchSongsInDb(title).first().toMutableList()
+                                } else {
+                                    // local songs have a source format of "<id>, <path>", YTM songs have "<url>
+                                    var id = source.substringBefore(',')
+                                    if (id.isEmpty()) {
+                                        id = source.substringAfter("watch?").substringAfter("=")
+                                            .substringBefore('?')
+                                    }
+                                    val dbResult = mutableListOf(database.song(id).first())
+                                    dbResult.addAll(database.searchSongsInDb(title).first())
+                                    dbResult.filterNotNull().toMutableList()
                                 }
-                                val dbResult = mutableListOf(database.song(id).first())
-                                dbResult.addAll(database.searchSongsInDb(title).first())
-                                dbResult.filterNotNull().toMutableList()
-                            }
-                            // do not search for local songs
-                            val query = "$title ${Uri.decode(artists.joinToString(" "))}"
-                            if (searchOnline && matches.isEmpty() && source?.contains(',') == false) {
-                                val suggestions = YouTube.searchSuggestions(query).getOrNull()
-                                val suggestionSongs = suggestions?.recommendedItems.orEmpty().distinctBy { it.id }.filter{it is SongItem}
-                                suggestionSongs.forEach { suggestion ->
-                                    val song = (suggestion as SongItem).toMediaMetadata()
-                                    val result = Song(
-                                        song = song.toSongEntity(),
-                                        artists = song.artists.map {
-                                            ArtistEntity(
-                                                id = it.id ?: ArtistEntity.generateArtistId(),
-                                                name = it.name
-                                            )
-                                        }
-                                    )
-                                    matches.add(result)
-                                }
-                                val onlineResult =
-                                    LocalMediaScanner.youtubeSongLookup(query, source)
-                                onlineResult.forEach { result ->
-                                    val result = Song(
-                                        song = result.toSongEntity(),
-                                        artists = result.artists.map {
-                                            ArtistEntity(
-                                                id = it.id ?: ArtistEntity.generateArtistId(),
-                                                name = it.name
-                                            )
-                                        }
-                                    )
-                                    matches.add(result)
-                                }
-                            }
-                            matches.distinctBy { it.id }
-                            val oldSize = unorderedSongs.size
-                            var foundOne =
-                                false // TODO: Eventually the user can pick from matches... eventually...
-
-                            // take first song when searching on YTM
-                            if (matchStrength == ScannerM3uMatchCriteria.LEVEL_0 && searchOnline && matches.isNotEmpty()) {
-                                unorderedSongs.add(Triple(index,query, matches.first()))
-                            } else {
-                                for (s in matches) {
-                                    if (compareM3uSong(
-                                            mockSong,
-                                            s,
-                                            matchStrength = matchStrength
+                                // do not search for local songs
+                                val query = "$title ${Uri.decode(artists.joinToString(" "))}"
+                                if (searchOnline && matches.isEmpty() && source?.contains(',') == false) {
+                                    val suggestions = YouTube.searchSuggestions(query).getOrNull()
+                                    val suggestionSongs = suggestions?.recommendedItems.orEmpty().distinctBy { it.id }.filter { it is SongItem }
+                                    suggestionSongs.forEach { suggestion ->
+                                        val song = (suggestion as SongItem).toMediaMetadata()
+                                        val result = Song(
+                                            song = song.toSongEntity(),
+                                            artists = song.artists.map {
+                                                ArtistEntity(
+                                                    id = it.id ?: ArtistEntity.generateArtistId(),
+                                                    name = it.name
+                                                )
+                                            }
                                         )
-                                    ) {
-                                        unorderedSongs.add(Triple(index, "", s))
-                                        foundOne = true
-                                        break
+                                        matches.add(result)
+                                    }
+                                    val onlineResult =
+                                        LocalMediaScanner.youtubeSongLookup(query, source)
+                                    onlineResult.forEach { result ->
+                                        val result = Song(
+                                            song = result.toSongEntity(),
+                                            artists = result.artists.map {
+                                                ArtistEntity(
+                                                    id = it.id ?: ArtistEntity.generateArtistId(),
+                                                    name = it.name
+                                                )
+                                            }
+                                        )
+                                        matches.add(result)
                                     }
                                 }
-                            }
+                                matches.distinctBy { it.id }
+                                val oldSize = unorderedSongs.size
+                                var foundOne =
+                                    false // TODO: Eventually the user can pick from matches... eventually...
 
-                            if (oldSize == unorderedSongs.size) {
-                                unorderedRejectedSongs.add(Pair(index, mockSong))
+                                // take first song when searching on YTM
+                                if (matchStrength == ScannerM3uMatchCriteria.LEVEL_0 && searchOnline && matches.isNotEmpty()) {
+                                    unorderedSongs.add(Triple(index, query, matches.first()))
+                                } else {
+                                    for (s in matches) {
+                                        if (compareM3uSong(
+                                                mockSong,
+                                                s,
+                                                matchStrength = matchStrength
+                                            )
+                                        ) {
+                                            unorderedSongs.add(Triple(index, "", s))
+                                            foundOne = true
+                                            break
+                                        }
+                                    }
+                                }
+
+                                if (oldSize == unorderedSongs.size) {
+                                    unorderedRejectedSongs.add(Pair(index, mockSong))
+                                }
+                                processed++
+                                val percent = if (toProcess > 0)
+                                    ((processed.toFloat() / toProcess) * 100).toInt()
+                                else 0
+                                onPercentageChange(percent)
                             }
-                            processed += 1
-                            val percent =
-                                if (toProcess > 0) ((processed.toFloat() / toProcess) * 100).toInt() else 0
-                            onPercentageChange(percent)
                         }
                     }
                 }
@@ -813,18 +827,20 @@ suspend fun loadM3u(
                 }
                 unorderedSongs.sortBy { it.first }
                 unorderedRejectedSongs.sortBy { it.first }
-                songs = unorderedSongs.map { (_, query, song) -> Triple(query, song, UUID.randomUUID().toString())} as ArrayList<Triple<String, Song, String>>
+                songs = unorderedSongs.map { (_, query, song) -> Triple(query, song, UUID.randomUUID().toString()) } as ArrayList<Triple<String, Song, String>>
                 rejectedSongs = unorderedRejectedSongs
                 onPercentageChange(0)
             }
         }
     }.onFailure {
-        reportException(it)
-        Toast.makeText(context, R.string.m3u_import_playlist_failed, Toast.LENGTH_SHORT).show()
+        if (it !is CancellationException){
+            reportException(it)
+            Toast.makeText(context, R.string.m3u_import_playlist_failed, Toast.LENGTH_SHORT).show()
+        }
     }
 
     if (songs.isEmpty()) {
-        CoroutineScope(Dispatchers.Main).launch {
+        withContext(Dispatchers.Main) {
             snackbarHostState.showSnackbar(
                 message = context.getString(R.string.m3u_import_failed),
                 withDismissAction = true,
@@ -843,8 +859,9 @@ suspend fun loadM3u(
         }
     }
     val fileName = (name ?: (uri.path?.substringAfterLast('/') ?: "")).substringBeforeLast('.')
-    return Triple(songs, rejectedSongs, fileName)
+    Triple(songs, rejectedSongs, fileName)
 }
+
 
 /**
  * Read a file to a string
