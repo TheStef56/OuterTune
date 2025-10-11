@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -38,15 +39,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Input
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Input
 import androidx.compose.material.icons.filled.Input
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Input
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.SwapHoriz
@@ -90,6 +94,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.toLowerCase
 import androidx.compose.ui.unit.LayoutDirection
@@ -120,6 +125,8 @@ import com.dd3boh.outertune.extensions.togglePlayPause
 import com.dd3boh.outertune.models.toMediaMetadata
 import com.dd3boh.outertune.playback.queues.ListQueue
 import com.dd3boh.outertune.ui.component.AutoResizeText
+import com.dd3boh.outertune.ui.component.ChipsLazyRow
+import com.dd3boh.outertune.ui.component.ChipsRow
 import com.dd3boh.outertune.ui.component.EnumListPreference
 import com.dd3boh.outertune.ui.component.FontSizeRange
 import com.dd3boh.outertune.ui.component.LazyColumnScrollbar
@@ -131,6 +138,7 @@ import com.dd3boh.outertune.ui.component.items.ListItem
 import com.dd3boh.outertune.ui.dialog.AddToPlaylistDialog
 import com.dd3boh.outertune.ui.dialog.DefaultDialog
 import com.dd3boh.outertune.ui.menu.SongMenu
+import com.dd3boh.outertune.ui.screens.Screens.LibraryFilter
 import com.dd3boh.outertune.ui.screens.playlist.PlaylistType
 import com.dd3boh.outertune.ui.utils.backToMain
 import com.dd3boh.outertune.ui.utils.getNSongsString
@@ -141,6 +149,7 @@ import com.dd3boh.outertune.utils.reportException
 import com.dd3boh.outertune.utils.scanners.LocalMediaScanner
 import com.dd3boh.outertune.utils.scanners.LocalMediaScanner.Companion.compareM3uSong
 import com.dd3boh.outertune.viewmodels.ImportM3uViewModel
+import com.dd3boh.outertune.viewmodels.LocalFilter
 import com.zionhuang.innertube.YouTube
 import com.zionhuang.innertube.models.SongItem
 import kotlinx.coroutines.CancellationException
@@ -214,24 +223,24 @@ fun ImportM3uScreen(
 
     var showOptions by remember { mutableStateOf(false) }
 
-    val title = stringResource(R.string.import_playlist)
 
     val haptic = LocalHapticFeedback.current
 
+    var importedChipsValue by remember {mutableStateOf(importM3uFilter.ALL)}
+
+    val title =  stringResource(R.string.import_playlist)
+
     var showEditOptions by remember { mutableStateOf(false) }
 
-    // Create a Job that represents all running work for this screen
     val importJob = remember { SupervisorJob() }
 
-    // Create a CoroutineScope that’s tied to this screen
     val importScope = remember {
         CoroutineScope(importJob + Dispatchers.IO)
     }
 
-    // Cancel all running work when leaving the page
     DisposableEffect(Unit) {
         onDispose {
-            importJob.cancel()  // 💥 nukes every launched coroutine
+            importJob.cancel()
         }
     }
 
@@ -471,16 +480,6 @@ fun ImportM3uScreen(
                                 overflow = TextOverflow.Ellipsis,
                                 fontSizeRange = FontSizeRange(16.sp, 22.sp)
                             )
-                            Text(
-                                text = "Imported (${viewModel.importedSongs.size})",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Normal
-                            )
-                            Text(
-                                text = "Not found (${viewModel.rejectedSongs.size})",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Normal
-                            )
                             TextButton(
                                 onClick = { showOptions = true },
                             ) {
@@ -515,8 +514,21 @@ fun ImportM3uScreen(
                             },
                             enabled = !isLoading
                         ) {
-                            Text(stringResource(R.string.m3u_import_playlist))
+                            Text("import m3u") // TODO: add to R.string
                         }
+
+                    }
+
+                    if (viewModel.importedSongs.isNotEmpty() || viewModel.rejectedSongs.isNotEmpty()) {
+                        ChipsRow(
+                            chips = listOf(
+                                importM3uFilter.ALL to "${stringResource(R.string.filter_all)} (${viewModel.importedSongs.size + viewModel.rejectedSongs.size})",
+                                importM3uFilter.IMPORTED to "Imported (${viewModel.importedSongs.size})",
+                                importM3uFilter.REJECTED to "Rejected (${viewModel.rejectedSongs.size})",
+                            ),
+                            currentValue = importedChipsValue,
+                            onValueUpdate = { importedChipsValue = it }
+                        )
                     }
 
                 }
@@ -545,6 +557,40 @@ fun ImportM3uScreen(
                                 modifier = Modifier.size(120.dp)
                             )
                         }
+                    }
+                }
+            } else if (viewModel.importedSongs.isEmpty()) {
+                item {
+                    Column (
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(top = 120.dp)
+
+                    ) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(AlbumThumbnailSize/2)
+                                .padding(4.dp)
+                                .background(
+                                    MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp),
+                                    shape = RoundedCornerShape(ThumbnailCornerRadius)
+                                )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.MusicNote,
+                                contentDescription = null,
+                                tint = LocalContentColor.current.copy(alpha = 0.8f),
+                                modifier = Modifier
+                                    .size(AlbumThumbnailSize / 4 + 16.dp)
+                                    .align(Alignment.Center)
+                            )
+                        }
+                        Text(
+                            text = "Import a playlist to get\nstarted", // TODO: add to R.string
+                            textAlign = TextAlign.Center
+                        )
                     }
                 }
             }
@@ -873,4 +919,8 @@ fun InputStream.readLines(): List<String> {
 fun queryMatchesSong(query: String, song: Song) : Boolean{
     val songData = "${song.title} ${Uri.decode(song.artists.joinToString( " "))}"
     return songData.lowercase().contains(query.lowercase())
+}
+
+enum class importM3uFilter {
+    ALL, IMPORTED, REJECTED
 }
