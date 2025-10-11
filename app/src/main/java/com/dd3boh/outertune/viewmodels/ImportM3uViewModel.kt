@@ -5,6 +5,5 @@ import androidx.lifecycle.ViewModel
 import com.dd3boh.outertune.db.entities.Song
 
 class ImportM3uViewModel : ViewModel() {
-    val importedSongs = mutableStateListOf<Triple<String, Song, String>>()
-    val rejectedSongs = mutableStateListOf<Pair<Int, Song>>()
+    val importedSongs = mutableStateListOf<Triple<Pair<String, Song>, String, Boolean>>()
 }

@@ -10,13 +10,12 @@ package com.dd3boh.outertune.ui.screens
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,7 +27,6 @@ import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -38,17 +36,12 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Input
-import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Input
-import androidx.compose.material.icons.filled.Input
-import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DragHandle
-import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.GraphicEq
-import androidx.compose.material.icons.rounded.Input
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Search
@@ -86,17 +79,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.toLowerCase
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -106,7 +96,6 @@ import androidx.navigation.NavController
 import com.dd3boh.outertune.BuildConfig
 import com.dd3boh.outertune.LocalDatabase
 import com.dd3boh.outertune.LocalDownloadUtil
-import com.dd3boh.outertune.LocalMenuState
 import com.dd3boh.outertune.LocalPlayerAwareWindowInsets
 import com.dd3boh.outertune.LocalPlayerConnection
 import com.dd3boh.outertune.LocalSnackbarHostState
@@ -125,31 +114,23 @@ import com.dd3boh.outertune.extensions.togglePlayPause
 import com.dd3boh.outertune.models.toMediaMetadata
 import com.dd3boh.outertune.playback.queues.ListQueue
 import com.dd3boh.outertune.ui.component.AutoResizeText
-import com.dd3boh.outertune.ui.component.ChipsLazyRow
 import com.dd3boh.outertune.ui.component.ChipsRow
 import com.dd3boh.outertune.ui.component.EnumListPreference
 import com.dd3boh.outertune.ui.component.FontSizeRange
 import com.dd3boh.outertune.ui.component.LazyColumnScrollbar
 import com.dd3boh.outertune.ui.component.button.IconButton
-import com.dd3boh.outertune.ui.component.button.IconTextButton
 import com.dd3boh.outertune.ui.component.items.Icon
 import com.dd3boh.outertune.ui.component.items.ItemThumbnail
 import com.dd3boh.outertune.ui.component.items.ListItem
 import com.dd3boh.outertune.ui.dialog.AddToPlaylistDialog
 import com.dd3boh.outertune.ui.dialog.DefaultDialog
-import com.dd3boh.outertune.ui.menu.SongMenu
-import com.dd3boh.outertune.ui.screens.Screens.LibraryFilter
-import com.dd3boh.outertune.ui.screens.playlist.PlaylistType
 import com.dd3boh.outertune.ui.utils.backToMain
-import com.dd3boh.outertune.ui.utils.getNSongsString
 import com.dd3boh.outertune.utils.joinByBullet
-import com.dd3boh.outertune.utils.lmScannerCoroutine
 import com.dd3boh.outertune.utils.makeTimeString
 import com.dd3boh.outertune.utils.reportException
 import com.dd3boh.outertune.utils.scanners.LocalMediaScanner
 import com.dd3boh.outertune.utils.scanners.LocalMediaScanner.Companion.compareM3uSong
 import com.dd3boh.outertune.viewmodels.ImportM3uViewModel
-import com.dd3boh.outertune.viewmodels.LocalFilter
 import com.zionhuang.innertube.YouTube
 import com.zionhuang.innertube.models.SongItem
 import kotlinx.coroutines.CancellationException
@@ -201,7 +182,7 @@ fun ImportM3uScreen(
         LazyListState()
     }
 
-    val headerItems = 2
+    val headerItems = 1
     val reorderableState = rememberReorderableLazyListState(
         lazyListState = mainListState,
         scrollThresholdPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues()
@@ -252,7 +233,6 @@ fun ImportM3uScreen(
             try {
                 if (uri != null) {
                     viewModel.importedSongs.clear()
-                    viewModel.rejectedSongs.clear()
 
                     val result = loadM3u(
                         context = context,
@@ -266,7 +246,7 @@ fun ImportM3uScreen(
                         }
                     )
                     viewModel.importedSongs.addAll(result.first)
-                    viewModel.rejectedSongs.addAll(result.second)
+                    importedTitle = result.second
                 }
             } finally {
                 isLoading = false
@@ -278,7 +258,7 @@ fun ImportM3uScreen(
         if (replaceSong.value != null) {
             val prevSongQuery = viewModel.importedSongs[searchId].first
             viewModel.importedSongs[searchId] =
-                Triple(prevSongQuery, replaceSong.value, UUID.randomUUID().toString()) as Triple<String, Song, String>
+                Triple(Pair(prevSongQuery, replaceSong.value), UUID.randomUUID().toString(), true) as Triple<Pair<String, Song>, String, Boolean>
             replaceSong.value = null
         }
     }
@@ -353,7 +333,7 @@ fun ImportM3uScreen(
                 TextButton(
                     onClick = {
                         val route =
-                            "search_rep/${Uri.encode(viewModel.importedSongs.map { (query, _) -> query }[searchId])}?rep=true"
+                            "search_rep/${Uri.encode(viewModel.importedSongs.map { (querySong, _) -> querySong.first }[searchId])}?rep=true"
                         navController.navigate(route)
                         showEditOptions = false
                     },
@@ -519,12 +499,12 @@ fun ImportM3uScreen(
 
                     }
 
-                    if (viewModel.importedSongs.isNotEmpty() || viewModel.rejectedSongs.isNotEmpty()) {
+                    if (viewModel.importedSongs.isNotEmpty()) {
                         ChipsRow(
                             chips = listOf(
-                                importM3uFilter.ALL to "${stringResource(R.string.filter_all)} (${viewModel.importedSongs.size + viewModel.rejectedSongs.size})",
-                                importM3uFilter.IMPORTED to "Imported (${viewModel.importedSongs.size})",
-                                importM3uFilter.REJECTED to "Rejected (${viewModel.rejectedSongs.size})",
+                                importM3uFilter.ALL to "${stringResource(R.string.filter_all)} (${viewModel.importedSongs.size})",
+                                importM3uFilter.IMPORTED to "Imported (${viewModel.importedSongs.filter { it.third }.size})",
+                                importM3uFilter.REJECTED to "Rejected (${viewModel.importedSongs.filter { !it.third }.size})",
                             ),
                             currentValue = importedChipsValue,
                             onValueUpdate = { importedChipsValue = it }
@@ -597,49 +577,61 @@ fun ImportM3uScreen(
 
             if (viewModel.importedSongs.isNotEmpty()) {
                 itemsIndexed(
-                    items = viewModel.importedSongs.map { (_, song, uuid) -> Pair(song, uuid) },
-                    key = { _, (_, uuid) -> uuid }
-                ) { index, (song, uuid) ->
+                    items = viewModel.importedSongs.map { (querySong, uuid, found) -> Triple(querySong.second, uuid, found) },
+                    key = { _, (_, uuid, _) -> uuid }
+                ) { index, (song, uuid, found) ->
                     if (isSearching && !queryMatchesSong(searchQuery, song)) {
+                        return@itemsIndexed
+                    }
+                    if (importedChipsValue == importM3uFilter.IMPORTED && !found || importedChipsValue == importM3uFilter.REJECTED && found) {
                         return@itemsIndexed
                     }
                     ReorderableItem(
                         state = reorderableState,
                         key = uuid,
-                        enabled = true
                     ) {
                         ListItem(
                             title = song.song.title,
                             subtitle = joinByBullet(
                                 (if (BuildConfig.DEBUG) song.song.id else ""),
-                                song.artists.joinToString { it.name },
+                                Uri.decode(song.artists.joinToString { it.name }),
                                 makeTimeString(song.song.duration * 1000L)
                             ),
                             badges = {
-                                if (song.song.liked) {
-                                    Icon.Favorite()
-                                }
-                                if (song.song.isLocal) {
-                                    Icon.FolderCopy()
-                                } else if (song.song.inLibrary != null) {
-                                    Icon.Library()
-                                }
-                                if (LocalDownloadUtil.current.getCustomDownload(song.id)) {
-                                    Icon.Download(Download.STATE_COMPLETED)
-                                } else {
-                                    val download by LocalDownloadUtil.current.getDownload(song.id)
-                                        .collectAsState(initial = null)
-                                    Icon.Download(download?.state)
+                                if (found) {
+                                    if (song.song.liked) {
+                                        Icon.Favorite()
+                                    }
+                                    if (song.song.isLocal) {
+                                        Icon.FolderCopy()
+                                    } else if (song.song.inLibrary != null) {
+                                        Icon.Library()
+                                    }
+                                    if (LocalDownloadUtil.current.getCustomDownload(song.id)) {
+                                        Icon.Download(Download.STATE_COMPLETED)
+                                    } else {
+                                        val download by LocalDownloadUtil.current.getDownload(song.id)
+                                            .collectAsState(initial = null)
+                                        Icon.Download(download?.state)
+                                    }
                                 }
                             },
                             thumbnailContent = {
-                                ItemThumbnail(
-                                    thumbnailUrl = if (song.song.isLocal) song.song.localPath else song.song.thumbnailUrl,
-                                    isActive = false,
-                                    isPlaying = false,
-                                    shape = RoundedCornerShape(ThumbnailCornerRadius),
-                                    modifier = Modifier.size(ListThumbnailSize)
-                                )
+                                if (found) {
+                                    ItemThumbnail(
+                                        thumbnailUrl = if (song.song.isLocal) song.song.localPath else song.song.thumbnailUrl,
+                                        isActive = false,
+                                        isPlaying = false,
+                                        shape = RoundedCornerShape(ThumbnailCornerRadius),
+                                        modifier = Modifier.size(ListThumbnailSize)
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Default.Warning,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(ListThumbnailSize)
+                                    )
+                                }
                             },
                             trailingContent = {
                                 IconButton(
@@ -667,8 +659,8 @@ fun ImportM3uScreen(
                             },
                             isSelected = false,
                             isActive = LocalPlayerConnection.current?.mediaMetadata?.collectAsState()?.value?.id == song.id,
-                            modifier = Modifier.combinedClickable(
-                                onClick = {
+                            modifier = Modifier.clickable {
+                                if (found) {
                                     if (song.id == playerConnection?.mediaMetadata?.value?.id) {
                                         playerConnection.player.togglePlayPause()
                                     } else {
@@ -679,30 +671,8 @@ fun ImportM3uScreen(
                                             )
                                         )
                                     }
-                                },
-                            )
-                        )
-                    }
-                }
-                if (viewModel.rejectedSongs.isNotEmpty()) {
-                    itemsIndexed(
-                        items = viewModel.rejectedSongs.map { (_, song) -> song },
-                        key = { index, song -> index.hashCode() + song.hashCode() }
-                    ) { index, song ->
-                        if (isSearching && !queryMatchesSong(searchQuery, song)) {
-                            return@itemsIndexed
-                        }
-                        ListItem(
-                            title = song.song.title,
-                            subtitle = joinByBullet(
-                                (if (BuildConfig.DEBUG) song.song.id else ""),
-                                song.artists.joinToString { it.name },
-                                makeTimeString(song.song.duration * 1000L)
-                            ),
-                            thumbnailContent = {},
-                            trailingContent = {},
-                            isSelected = false,
-                            isActive = false,
+                                }
+                            }
                         )
                     }
                 }
@@ -719,9 +689,9 @@ fun ImportM3uScreen(
             navController = navController,
             allowSyncing = false,
             initialTextFieldValue = importedTitle,
-            songIds = viewModel.importedSongs.map { (_, song) -> song.id },
+            songIds = viewModel.importedSongs.filter { it.third }.map { (querySong, _, _) -> querySong.second.id },
             onPreAdd = {
-                viewModel.importedSongs.map { (_, song) -> song }.forEach {
+                viewModel.importedSongs.map { (querySong, _, _) -> querySong.second }.forEach {
                     database.insert(it.toMediaMetadata())
                 }
                 emptyList()
@@ -747,12 +717,10 @@ suspend fun loadM3u(
     matchStrength: ScannerM3uMatchCriteria = ScannerM3uMatchCriteria.LEVEL_1,
     searchOnline: Boolean = false,
     onPercentageChange: (Int) -> Unit
-): Triple<ArrayList<Triple<String, Song, String>>, ArrayList<Pair<Int, Song>>, String> = withContext(Dispatchers.IO) {
-    val unorderedSongs = ArrayList<Triple<Int, String, Song>>()
-    val unorderedRejectedSongs = ArrayList<Pair<Int, Song>>()
+): Pair<ArrayList<Triple<Pair<String, Song>, String, Boolean>>, String> = withContext(Dispatchers.IO) {
+    val unorderedSongs = ArrayList<Triple<Int, Pair<String, Song>, Boolean>>()
 
-    var songs = ArrayList<Triple<String, Song, String>>()
-    var rejectedSongs = ArrayList<Pair<Int, Song>>()
+    var songs = ArrayList<Triple<Pair<String, Song>, String, Boolean>>()
     var toProcess: Int
     var processed = 0
 
@@ -835,12 +803,10 @@ suspend fun loadM3u(
                                 }
                                 matches.distinctBy { it.id }
                                 val oldSize = unorderedSongs.size
-                                var foundOne =
-                                    false // TODO: Eventually the user can pick from matches... eventually...
 
                                 // take first song when searching on YTM
                                 if (matchStrength == ScannerM3uMatchCriteria.LEVEL_0 && searchOnline && matches.isNotEmpty()) {
-                                    unorderedSongs.add(Triple(index, query, matches.first()))
+                                    unorderedSongs.add(Triple(index, Pair(query, matches.first()), true))
                                 } else {
                                     for (s in matches) {
                                         if (compareM3uSong(
@@ -849,15 +815,14 @@ suspend fun loadM3u(
                                                 matchStrength = matchStrength
                                             )
                                         ) {
-                                            unorderedSongs.add(Triple(index, "", s))
-                                            foundOne = true
+                                            unorderedSongs.add(Triple(index, Pair(query, s), true))
                                             break
                                         }
                                     }
                                 }
 
                                 if (oldSize == unorderedSongs.size) {
-                                    unorderedRejectedSongs.add(Pair(index, mockSong))
+                                    unorderedSongs.add(Triple(index, Pair(query, mockSong), false))
                                 }
                                 processed++
                                 val percent = if (toProcess > 0)
@@ -872,10 +837,7 @@ suspend fun loadM3u(
                     delay(10)
                 }
                 unorderedSongs.sortBy { it.first }
-                unorderedRejectedSongs.sortBy { it.first }
-                songs = unorderedSongs.map { (_, query, song) -> Triple(query, song, UUID.randomUUID().toString()) } as ArrayList<Triple<String, Song, String>>
-                rejectedSongs = unorderedRejectedSongs
-                onPercentageChange(0)
+                songs = unorderedSongs.map { (_, querySong, found) -> Triple(querySong, UUID.randomUUID().toString(), found) } as ArrayList<Triple<Pair<String, Song>, String, Boolean>>
             }
         }
     }.onFailure {
@@ -905,7 +867,7 @@ suspend fun loadM3u(
         }
     }
     val fileName = (name ?: (uri.path?.substringAfterLast('/') ?: "")).substringBeforeLast('.')
-    Triple(songs, rejectedSongs, fileName)
+    Pair(songs, fileName)
 }
 
 
