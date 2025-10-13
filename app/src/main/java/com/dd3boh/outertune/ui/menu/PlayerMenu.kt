@@ -584,11 +584,12 @@ fun PlayerMenu(
             navController = navController,
             songIds = listOf(mediaMetadata.id),
             onPreAdd = { playlist ->
+                if (playlist == null) return@AddToPlaylistDialog emptyList()
                 database.transaction {
                     insert(mediaMetadata)
                 }
 
-                playlist!!.playlist.browseId?.let { YouTube.addToPlaylist(it, mediaMetadata.id) }
+                playlist.playlist.browseId?.let { YouTube.addToPlaylist(it, mediaMetadata.id) }
 
                 listOf(mediaMetadata.id)
             },

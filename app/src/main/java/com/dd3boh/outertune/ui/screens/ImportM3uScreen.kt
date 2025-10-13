@@ -14,38 +14,45 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.calculateEndPadding
-import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.automirrored.rounded.Input
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.GraphicEq
-import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -66,43 +73,46 @@ import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.media3.exoplayer.offline.Download
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.dd3boh.outertune.BuildConfig
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
 import com.dd3boh.outertune.LocalDatabase
-import com.dd3boh.outertune.LocalDownloadUtil
 import com.dd3boh.outertune.LocalPlayerAwareWindowInsets
-import com.dd3boh.outertune.LocalPlayerConnection
 import com.dd3boh.outertune.LocalSnackbarHostState
 import com.dd3boh.outertune.R
 import com.dd3boh.outertune.constants.AlbumThumbnailSize
-import com.dd3boh.outertune.constants.ListThumbnailSize
 import com.dd3boh.outertune.constants.ScannerM3uMatchCriteria
+import com.dd3boh.outertune.constants.SearchSource
+import com.dd3boh.outertune.constants.SearchSourceKey
 import com.dd3boh.outertune.constants.ThumbnailCornerRadius
 import com.dd3boh.outertune.constants.TopBarInsets
 import com.dd3boh.outertune.db.MusicDatabase
@@ -110,35 +120,38 @@ import com.dd3boh.outertune.db.entities.ArtistEntity
 import com.dd3boh.outertune.db.entities.Song
 import com.dd3boh.outertune.db.entities.SongEntity
 import com.dd3boh.outertune.extensions.move
-import com.dd3boh.outertune.extensions.togglePlayPause
 import com.dd3boh.outertune.models.toMediaMetadata
-import com.dd3boh.outertune.playback.queues.ListQueue
-import com.dd3boh.outertune.ui.component.AutoResizeText
 import com.dd3boh.outertune.ui.component.ChipsRow
+import com.dd3boh.outertune.ui.component.EmptyPlaceholder
 import com.dd3boh.outertune.ui.component.EnumListPreference
-import com.dd3boh.outertune.ui.component.FontSizeRange
 import com.dd3boh.outertune.ui.component.LazyColumnScrollbar
+import com.dd3boh.outertune.ui.component.SearchBar
 import com.dd3boh.outertune.ui.component.button.IconButton
-import com.dd3boh.outertune.ui.component.items.Icon
-import com.dd3boh.outertune.ui.component.items.ItemThumbnail
-import com.dd3boh.outertune.ui.component.items.ListItem
+import com.dd3boh.outertune.ui.component.items.M3uSongListItem
+import com.dd3boh.outertune.ui.component.items.M3uSongSearchListItem
+import com.dd3boh.outertune.ui.component.items.YouTubeListItem
+import com.dd3boh.outertune.ui.component.shimmer.ListItemPlaceHolder
+import com.dd3boh.outertune.ui.component.shimmer.ShimmerHost
 import com.dd3boh.outertune.ui.dialog.AddToPlaylistDialog
 import com.dd3boh.outertune.ui.dialog.DefaultDialog
 import com.dd3boh.outertune.ui.utils.backToMain
-import com.dd3boh.outertune.utils.joinByBullet
-import com.dd3boh.outertune.utils.makeTimeString
+import com.dd3boh.outertune.utils.rememberEnumPreference
 import com.dd3boh.outertune.utils.reportException
 import com.dd3boh.outertune.utils.scanners.LocalMediaScanner
 import com.dd3boh.outertune.utils.scanners.LocalMediaScanner.Companion.compareM3uSong
 import com.dd3boh.outertune.viewmodels.ImportM3uViewModel
 import com.zionhuang.innertube.YouTube
 import com.zionhuang.innertube.models.SongItem
+import com.zionhuang.innertube.models.YTItem
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -154,21 +167,22 @@ import kotlin.text.startsWith
 import kotlin.text.substringAfter
 import kotlin.text.substringBefore
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
 @Composable
 fun ImportM3uScreen(
     navController: NavController,
     scrollBehavior: TopAppBarScrollBehavior,
-    replaceSong: MutableState<Song?>,
-    viewModel: ImportM3uViewModel = viewModel ()
+    viewModel: ImportM3uViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val database = LocalDatabase.current
+    val focusRequester = remember { FocusRequester() }
     val snackbarHostState = LocalSnackbarHostState.current
 
     var scannerSensitivity by rememberSaveable {
         mutableStateOf(ScannerM3uMatchCriteria.LEVEL_1)
     }
+    var searchSource by rememberEnumPreference(SearchSourceKey, SearchSource.ONLINE)
 
     var remoteLookup by rememberSaveable { mutableStateOf(false) }
     var isLoading by rememberSaveable { mutableStateOf(false) }
@@ -192,24 +206,53 @@ fun ImportM3uScreen(
         }
     }
 
+    // TODO: m3u: future selection mode
+    var inSelectMode by rememberSaveable { mutableStateOf(false) }
+    val selection = rememberSaveable(
+        saver = listSaver<MutableList<String>, String>(
+            save = { it.toList() },
+            restore = { it.toMutableStateList() }
+        )
+    ) { mutableStateListOf() }
+    val onExitSelectionMode = {
+        inSelectMode = false
+        selection.clear()
+    }
+
+    // search
     var isSearching by rememberSaveable { mutableStateOf(false) }
+    var query by rememberSaveable(stateSaver = TextFieldValue.Saver) {
+        mutableStateOf(TextFieldValue())
+    }
 
-    val focusRequester = remember { FocusRequester() }
+    val (searchQuery, onSearchQueryChange) = rememberSaveable(stateSaver = TextFieldValue.Saver) {
+        mutableStateOf(TextFieldValue())
+    }
 
-    var searchQuery by rememberSaveable { mutableStateOf("") }
+    LaunchedEffect(searchQuery) {
+        snapshotFlow { searchQuery }.debounce { 300L }.collectLatest {
+            if (searchSource == SearchSource.ONLINE) {
+                viewModel.search(searchQuery.text)
+            } else {
+                viewModel.query.value = searchQuery.text
+            }
+        }
+    }
 
-    val playerConnection = LocalPlayerConnection.current
+    LaunchedEffect(isSearching) {
+        if (isSearching) {
+            focusRequester.requestFocus()
+        }
+    }
+
 
     var percentage by rememberSaveable { mutableIntStateOf(0) }
-
-    var showOptions by remember { mutableStateOf(false) }
 
 
     val haptic = LocalHapticFeedback.current
 
-    var importedChipsValue by remember {mutableStateOf(importM3uFilter.ALL)}
+    var importedChipsValue by remember { mutableStateOf(importM3uFilter.ALL) }
 
-    val title =  stringResource(R.string.import_playlist)
 
     var showEditOptions by remember { mutableStateOf(false) }
 
@@ -254,110 +297,492 @@ fun ImportM3uScreen(
         }
     }
 
-    LaunchedEffect(replaceSong.value) {
-        if (replaceSong.value != null) {
-            val prevSongQuery = viewModel.importedSongs[searchId].first
-            viewModel.importedSongs[searchId] =
-                Triple(Pair(prevSongQuery, replaceSong.value), UUID.randomUUID().toString(), true) as Triple<Pair<String, Song>, String, Boolean>
-            replaceSong.value = null
-        }
-    }
 
-    LaunchedEffect(isSearching) {
-        if (isSearching) {
-            focusRequester.requestFocus()
-        }
-    }
+    val windowInsets = LocalPlayerAwareWindowInsets.current.union(WindowInsets.ime)
 
-    val padding = LocalPlayerAwareWindowInsets.current.asPaddingValues()
+    val navigationItems = listOf(Screens.M3uList, Screens.M3uSearch)
+    val m3uNavController = rememberNavController()
+    val navBackStackEntry by m3uNavController.currentBackStackEntryAsState()
 
-    if (isSearching) {
-        BackHandler {
+    fun handleBack() {
+        if (navBackStackEntry?.destination?.route?.let { (it == Screens.M3uSearch.route) } == true) {
+            onSearchQueryChange(TextFieldValue())
+            m3uNavController.navigate(Screens.M3uList.route)
+        } else if (isSearching) {
             isSearching = false
+            query = TextFieldValue()
+        } else {
+            navController.navigateUp()
         }
     }
 
-    if (showOptions) {
-        DefaultDialog(
-            onDismiss = { showOptions = false },
-            icon = { Icon(Icons.Rounded.Settings, null) },
-            title = { Text(stringResource(R.string.settings)) },
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        NavHost(
+            navController = m3uNavController,
+            startDestination = Screens.M3uList.route,
+            enterTransition = {
+                val currentRouteIndex = navigationItems.indexOfFirst {
+                    it.route == targetState.destination.route
+                }
+                val previousRouteIndex = navigationItems.indexOfFirst {
+                    it.route == initialState.destination.route
+                }
+
+                if (currentRouteIndex == -1 || currentRouteIndex > previousRouteIndex)
+                    slideInHorizontally { it / 2 } + fadeIn(tween(250))
+                else
+                    slideInHorizontally { -it / 2 } + fadeIn(tween(250))
+            },
+            exitTransition = {
+                val currentRouteIndex = navigationItems.indexOfFirst {
+                    it.route == initialState.destination.route
+                }
+                val targetRouteIndex = navigationItems.indexOfFirst {
+                    it.route == targetState.destination.route
+                }
+
+                if (targetRouteIndex == -1 || targetRouteIndex > currentRouteIndex)
+                    slideOutHorizontally { -it / 2 } + fadeOut(tween(250))
+                else
+                    slideOutHorizontally { it / 2 } + fadeOut(tween(250))
+            },
+            popEnterTransition = {
+                val currentRouteIndex = navigationItems.indexOfFirst {
+                    it.route == targetState.destination.route
+                }
+                val previousRouteIndex = navigationItems.indexOfFirst {
+                    it.route == initialState.destination.route
+                }
+
+                if (previousRouteIndex != -1 && previousRouteIndex < currentRouteIndex)
+                    slideInHorizontally { it / 2 } + fadeIn(tween(250))
+                else
+                    slideInHorizontally { -it / 2 } + fadeIn(tween(250))
+            },
+            popExitTransition = {
+                val currentRouteIndex = navigationItems.indexOfFirst {
+                    it.route == initialState.destination.route
+                }
+                val targetRouteIndex = navigationItems.indexOfFirst {
+                    it.route == targetState.destination.route
+                }
+
+                if (currentRouteIndex != -1 && currentRouteIndex < targetRouteIndex)
+                    slideOutHorizontally { -it / 2 } + fadeOut(tween(250))
+                else
+                    slideOutHorizontally { it / 2 } + fadeOut(tween(250))
+            },
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
         ) {
-            EnumListPreference(
-                title = { Text(stringResource(R.string.scanner_sensitivity_title)) },
-                icon = { Icon(Icons.Rounded.GraphicEq, null) },
-                selectedValue = scannerSensitivity,
-                onValueSelected = { scannerSensitivity = it },
-                valueText = {
-                    when (it) {
-                        ScannerM3uMatchCriteria.LEVEL_0 -> stringResource(R.string.scanner_sensitivity_L0)
-                        ScannerM3uMatchCriteria.LEVEL_1 -> stringResource(R.string.scanner_sensitivity_L1)
-                        ScannerM3uMatchCriteria.LEVEL_2 -> stringResource(R.string.scanner_sensitivity_L2)
+            composable(Screens.M3uList.route) {
+                if (isSearching) {
+                    BackHandler {
+                        isSearching = false
+                        query = TextFieldValue()
                     }
                 }
-            )
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Checkbox(
-                    checked = remoteLookup,
-                    onCheckedChange = { remoteLookup = it }
-                )
-                Text(
-                    stringResource(R.string.m3u_ytm_lookup), color = MaterialTheme.colorScheme.secondary,
-                    fontSize = 14.sp
-                )
+                LazyColumn(
+                    state = mainListState,
+                    contentPadding = windowInsets.asPaddingValues()
+                ) {
+                    item {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                        ) {
+                            EnumListPreference(
+                                title = { Text(stringResource(R.string.scanner_sensitivity_title)) },
+                                icon = { Icon(Icons.Rounded.GraphicEq, null) },
+                                selectedValue = scannerSensitivity,
+                                onValueSelected = { scannerSensitivity = it },
+                                valueText = {
+                                    when (it) {
+                                        ScannerM3uMatchCriteria.LEVEL_0 -> stringResource(R.string.scanner_sensitivity_L0)
+                                        ScannerM3uMatchCriteria.LEVEL_1 -> stringResource(R.string.scanner_sensitivity_L1)
+                                        ScannerM3uMatchCriteria.LEVEL_2 -> stringResource(R.string.scanner_sensitivity_L2)
+                                    }
+                                }
+                            )
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Checkbox(
+                                    checked = remoteLookup,
+                                    onCheckedChange = { remoteLookup = it }
+                                )
+                                Text(
+                                    stringResource(R.string.m3u_ytm_lookup),
+                                    color = MaterialTheme.colorScheme.secondary,
+                                    fontSize = 14.sp
+                                )
+                            }
+
+                            Row(
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp)
+                            ) {
+                                Button(
+                                    onClick = { showChoosePlaylistDialog = true },
+                                    enabled = viewModel.importedSongs.isNotEmpty()
+                                ) {
+                                    Text(stringResource(R.string.add_to_playlist))
+                                }
+
+                                Spacer(Modifier.width(8.dp))
+
+                                Button(
+                                    onClick = {
+                                        importM3uLauncher.launch(arrayOf("audio/*"))
+                                    },
+                                    enabled = !isLoading
+                                ) {
+                                    Text("import m3u") // TODO: add to R.string
+                                }
+                            }
+
+                            if (viewModel.importedSongs.isNotEmpty()) {
+                                ChipsRow(
+                                    chips = listOf(
+                                        // TODO: m3u: string resource
+                                        importM3uFilter.ALL to "${stringResource(R.string.filter_all)} (${viewModel.importedSongs.size})",
+                                        importM3uFilter.IMPORTED to "Imported (${viewModel.importedSongs.filter { it.third }.size})",
+                                        importM3uFilter.REJECTED to "Rejected (${viewModel.importedSongs.filter { !it.third }.size})",
+                                    ),
+                                    currentValue = importedChipsValue,
+                                    onValueUpdate = { importedChipsValue = it }
+                                )
+                            }
+                        }
+                    }
+
+                    if (isLoading) {
+                        item {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(top = 150.dp)
+                            ) {
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier
+                                        .size(80.dp)
+                                ) {
+                                    Text(
+                                        text = "$percentage%",
+                                        fontSize = 24.sp,
+                                    )
+                                    CircularProgressIndicator(
+                                        strokeWidth = 4.dp,
+                                        modifier = Modifier.size(120.dp)
+                                    )
+                                }
+                            }
+                        }
+                    } else if (viewModel.importedSongs.isEmpty()) {
+                        item {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(top = 120.dp)
+                            ) {
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier
+                                        .size(AlbumThumbnailSize / 2)
+                                        .padding(4.dp)
+                                        .background(
+                                            MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp),
+                                            shape = RoundedCornerShape(ThumbnailCornerRadius)
+                                        )
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.MusicNote,
+                                        contentDescription = null,
+                                        tint = LocalContentColor.current.copy(alpha = 0.8f),
+                                        modifier = Modifier
+                                            .size(AlbumThumbnailSize / 4 + 16.dp)
+                                            .align(Alignment.Center)
+                                    )
+                                }
+                                Text(
+                                    text = "Import a playlist to get\nstarted", // TODO: add to R.string
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+
+                    if (viewModel.importedSongs.isNotEmpty()) {
+                        val songs = viewModel.importedSongs
+                            .filter { !isSearching || queryMatchesSong(query.text, it.first.second) }
+                            .filter {
+                                when (importedChipsValue) {
+                                    importM3uFilter.IMPORTED -> it.third
+                                    importM3uFilter.REJECTED -> !it.third
+                                    else -> true
+                                }
+                            }
+                        itemsIndexed(
+                            items = songs.map { (querySong, uuid, found) -> Triple(querySong.second, uuid, found) },
+                            key = { _, (_, uuid, _) -> uuid }
+                        ) { index, (song, uuid, found) ->
+                            ReorderableItem(
+                                state = reorderableState,
+                                key = uuid,
+                            ) {
+                                M3uSongListItem(
+                                    song = song,
+                                    isMissing = !found,
+                                    onEditClick = {
+                                        showEditOptions = true
+                                        searchId = index
+                                        haptic.performHapticFeedback(HapticFeedbackType.Companion.ContextClick)
+                                    },
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            composable(Screens.M3uSearch.route) {
+                val searchBarFocusRequester = remember { FocusRequester() }
+
+                BackHandler {
+                    handleBack()
+                }
+
+                SearchBar(
+                    query = searchQuery,
+                    onQueryChange = onSearchQueryChange,
+                    onSearch = {
+                        onSearchQueryChange(TextFieldValue(it))
+                    },
+                    active = true,
+                    onActiveChange = { },
+                    scrollBehavior = scrollBehavior,
+                    placeholder = {
+                        Text(
+                            text = stringResource(
+                                when (searchSource) {
+                                    SearchSource.LOCAL -> R.string.search_library
+                                    SearchSource.ONLINE -> R.string.search_yt_music
+                                }
+                            )
+                        )
+                    },
+                    trailingIcon = {
+                        if (searchQuery.text.isNotEmpty()) {
+                            IconButton(
+                                onClick = { onSearchQueryChange(TextFieldValue()) }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Close,
+                                    contentDescription = null
+                                )
+                            }
+                        }
+                        IconButton(
+                            onClick = {
+                                searchSource =
+                                    if (searchSource == SearchSource.ONLINE) SearchSource.LOCAL else SearchSource.ONLINE
+                            }
+                        ) {
+                            Icon(
+                                imageVector = when (searchSource) {
+                                    SearchSource.LOCAL -> Icons.Rounded.LibraryMusic
+                                    SearchSource.ONLINE -> Icons.Rounded.Language
+                                },
+                                contentDescription = null
+                            )
+                        }
+                    },
+                    windowInsets = windowInsets,
+                    focusRequester = searchBarFocusRequester,
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .fillMaxSize()
+                ) {
+                    Crossfade(
+                        targetState = searchSource,
+                        label = "",
+                        modifier = Modifier
+                            .fillMaxSize()
+                    ) { searchSource ->
+                        val replaceSearchListState = rememberLazyListState()
+
+                        when (searchSource) {
+                            SearchSource.LOCAL -> {
+                                val localResults by viewModel.localResult.collectAsState(emptyList())
+                                LazyColumn(
+                                    state = replaceSearchListState,
+                                ) {
+                                    items(
+                                        items = localResults,
+                                        key = { it.id }
+                                    ) { item ->
+                                        M3uSongSearchListItem(
+                                            song = item,
+                                            onSearchResultClick = {
+                                                val prevSongQuery = viewModel.importedSongs[searchId].first
+                                                viewModel.importedSongs[searchId] =
+                                                    Triple(
+                                                        Pair(prevSongQuery, item),
+                                                        UUID.randomUUID().toString(),
+                                                        true
+                                                    ) as Triple<Pair<String, Song>, String, Boolean> // TODO: m3u: why
+
+                                                m3uNavController.navigate(Screens.M3uList.route)
+                                                onSearchQueryChange(TextFieldValue())
+                                            },
+                                        )
+                                    }
+                                }
+                            }
+
+
+                            SearchSource.ONLINE -> {
+                                LaunchedEffect(replaceSearchListState) {
+                                    snapshotFlow {
+                                        replaceSearchListState.layoutInfo.visibleItemsInfo.any { it.key == "loading" }
+                                    }.collect { shouldLoadMore ->
+                                        if (!shouldLoadMore) return@collect
+                                        viewModel.loadMore()
+                                    }
+                                }
+
+
+                                val ytItemContent: @Composable LazyItemScope.(YTItem, List<YTItem>) -> Unit =
+                                    { item: YTItem, collection: List<YTItem> ->
+                                        fun onClick() {
+                                            val prevSongQuery =
+                                                viewModel.importedSongs[searchId].first
+                                            val songItem = (item as? SongItem)
+                                            if (songItem == null) return
+                                            val song = Song(
+                                                song = songItem.toMediaMetadata().toSongEntity(),
+                                                artists = songItem.artists.map {
+                                                    ArtistEntity(
+                                                        id = it.id
+                                                            ?: ArtistEntity.generateArtistId(),
+                                                        name = it.name
+                                                    )
+                                                }
+                                            )
+                                            viewModel.importedSongs[searchId] =
+                                                Triple(
+                                                    Pair(prevSongQuery, song),
+                                                    UUID.randomUUID().toString(), true
+                                                ) as Triple<Pair<String, Song>, String, Boolean>
+
+                                            m3uNavController.navigate(Screens.M3uList.route)
+                                            onSearchQueryChange(TextFieldValue())
+                                        }
+
+                                        val content: @Composable () -> Unit = {
+                                            YouTubeListItem(
+                                                item = item,
+                                                trailingContent = {
+                                                    IconButton(
+                                                        onClick = { onClick() }
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Rounded.SwapHoriz,
+                                                            contentDescription = null
+                                                        )
+                                                    }
+
+                                                },
+                                                modifier = Modifier
+                                                    .combinedClickable(
+                                                        onClick = { onClick() },
+                                                    )
+                                                    .animateItem()
+                                            )
+                                        }
+
+                                        content()
+                                    }
+                                val onlineResults by viewModel.onlineResult.collectAsState()
+                                LazyColumn(
+                                    state = replaceSearchListState,
+                                ) {
+                                    if (onlineResults == null) {
+                                        item {
+                                            EmptyPlaceholder(
+                                                icon = Icons.Rounded.Search,
+                                                text = stringResource(R.string.no_results_found),
+                                                modifier = Modifier.animateItem()
+                                            )
+                                        }
+                                    } else {
+                                        items(
+                                            items = onlineResults!!.items,
+                                            key = { it.id }
+                                        ) { item ->
+                                            ytItemContent(item, onlineResults!!.items)
+                                        }
+
+                                        if (onlineResults!!.continuation != null && searchQuery.text != "") {
+                                            item(key = "loading") {
+                                                ShimmerHost {
+                                                    repeat(3) {
+                                                        ListItemPlaceHolder()
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        if (onlineResults!!.items.isEmpty()) {
+                                            item {
+                                                EmptyPlaceholder(
+                                                    icon = Icons.Rounded.Search,
+                                                    text = stringResource(R.string.no_results_found),
+                                                    modifier = Modifier.animateItem()
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    if (searchQuery.text != "" && (onlineResults == null || onlineResults!!.continuation != null)) {
+                                        item {
+                                            ShimmerHost {
+                                                repeat(8) {
+                                                    ListItemPlaceHolder()
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
-    }
+        // jesus christ lord almighty
 
-    if (showEditOptions) {
-        DefaultDialog(
-            onDismiss = { showEditOptions = false },
-            title = { Text(stringResource(R.string.options)) },
-        ) {
-            Column () {
-                TextButton(
-                    onClick = {
-                        viewModel.importedSongs.removeAt(searchId)
-                        showEditOptions = false
-                    },
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Delete,
-                        contentDescription = null
-                    )
-                    Text(stringResource(R.string.delete))
-                }
-                TextButton(
-                    onClick = {
-                        val route =
-                            "search_rep/${Uri.encode(viewModel.importedSongs.map { (querySong, _) -> querySong.first }[searchId])}?rep=true"
-                        navController.navigate(route)
-                        showEditOptions = false
-                    },
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.SwapHoriz,
-                        contentDescription = null
-                    )
-                    Text(stringResource(R.string.edit))
-                }
-            }
-        }
-    }
 
-    Column (
-        modifier = Modifier
-            .fillMaxSize()
-    ){
+        LazyColumnScrollbar(
+            state = mainListState,
+        )
+
         TopAppBar(
             title = {
                 if (isSearching) {
                     TextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
+                        value = query,
+                        onValueChange = { query = it },
                         placeholder = {
                             Text(
                                 text = stringResource(R.string.search),
@@ -378,10 +803,12 @@ fun ImportM3uScreen(
                             .fillMaxWidth()
                             .focusRequester(focusRequester)
                     )
+                } else {
+                    Text(stringResource(R.string.import_playlist))
                 }
             },
             actions = {
-                if (!isSearching) {
+                if (!isSearching && navBackStackEntry?.destination?.route?.let { (it == Screens.M3uList.route) } == true) {
                     IconButton(
                         onClick = {
                             isSearching = true
@@ -396,8 +823,14 @@ fun ImportM3uScreen(
             },
             navigationIcon = {
                 IconButton(
-                    onClick = navController::navigateUp,
-                    onLongClick = navController::backToMain
+                    onClick = {
+                        handleBack()
+                    },
+                    onLongClick = {
+                        if (!isSearching) {
+                            navController.backToMain()
+                        }
+                    }
                 ) {
                     Icon(
                         Icons.AutoMirrored.Rounded.ArrowBack,
@@ -409,285 +842,48 @@ fun ImportM3uScreen(
             scrollBehavior = scrollBehavior
         )
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
+        // TODO: in the future, this will likely be its own full page with no navbar
+//        SnackbarHost(
+//            hostState = snackbarHostState,
+//            modifier = Modifier
+//                .windowInsetsPadding(LocalPlayerAwareWindowInsets.current.union(WindowInsets.ime))
+//                .align(Alignment.BottomCenter)
+//        )
+    }
+
+
+    if (showEditOptions) {
+        DefaultDialog(
+            onDismiss = { showEditOptions = false },
+            title = { Text(stringResource(R.string.options)) },
         ) {
-            LazyColumn(
-                state = mainListState,
-                contentPadding = PaddingValues(
-                    start = padding.calculateStartPadding(LayoutDirection.Ltr),
-                    top = 0.dp,
-                    bottom = padding.calculateBottomPadding(),
-                    end = padding.calculateEndPadding(LayoutDirection.Ltr)
-                ),
-            ) {
-                item {
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                    ) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(AlbumThumbnailSize)
-                                    .background(
-                                        MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp),
-                                        shape = RoundedCornerShape(ThumbnailCornerRadius)
-                                    )
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Rounded.Input,
-                                    contentDescription = null,
-                                    tint = LocalContentColor.current.copy(alpha = 0.8f),
-                                    modifier = Modifier
-                                        .size(AlbumThumbnailSize / 2 + 16.dp)
-                                        .align(Alignment.Center)
-                                )
-                            }
-                            Column(
-                                horizontalAlignment = Alignment.Start
-                            ) {
-                                AutoResizeText(
-                                    text = title,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                    fontSizeRange = FontSizeRange(16.sp, 22.sp)
-                                )
-                                TextButton(
-                                    onClick = { showOptions = true },
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Settings,
-                                        contentDescription = null
-                                    )
-                                    Text(stringResource(R.string.settings))
-                                }
-                            }
-                        }
-
-                        Row(
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp)
-                        ) {
-                            Button(
-                                onClick = { showChoosePlaylistDialog = true },
-                                enabled = viewModel.importedSongs.isNotEmpty()
-                            ) {
-                                Text(stringResource(R.string.add_to_playlist))
-                            }
-
-                            Spacer(Modifier.width(8.dp))
-
-                            Button(
-                                onClick = {
-                                    importM3uLauncher.launch(arrayOf("audio/*"))
-                                },
-                                enabled = !isLoading
-                            ) {
-                                Text("import m3u") // TODO: add to R.string
-                            }
-
-                        }
-
-                        if (viewModel.importedSongs.isNotEmpty()) {
-                            ChipsRow(
-                                chips = listOf(
-                                    importM3uFilter.ALL to "${stringResource(R.string.filter_all)} (${viewModel.importedSongs.size})",
-                                    importM3uFilter.IMPORTED to "Imported (${viewModel.importedSongs.filter { it.third }.size})",
-                                    importM3uFilter.REJECTED to "Rejected (${viewModel.importedSongs.filter { !it.third }.size})",
-                                ),
-                                currentValue = importedChipsValue,
-                                onValueUpdate = { importedChipsValue = it }
-                            )
-                        }
-
-                    }
+            Column() {
+                TextButton(
+                    onClick = {
+                        viewModel.importedSongs.removeAt(searchId)
+                        showEditOptions = false
+                    },
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Delete,
+                        contentDescription = null
+                    )
+                    Text(stringResource(R.string.delete))
                 }
-
-                if (isLoading) {
-                    item {
-                        Box (
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(top = 150.dp)
-
-                        ) {
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier
-                                    .size(80.dp)
-                            ) {
-                                Text(
-                                    text = "$percentage%",
-                                    fontSize = 24.sp,
-                                )
-                                CircularProgressIndicator(
-                                    strokeWidth = 4.dp,
-                                    modifier = Modifier.size(120.dp)
-                                )
-                            }
-                        }
-                    }
-                } else if (viewModel.importedSongs.isEmpty()) {
-                    item {
-                        Column (
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(top = 120.dp)
-
-                        ) {
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier
-                                    .size(AlbumThumbnailSize/2)
-                                    .padding(4.dp)
-                                    .background(
-                                        MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp),
-                                        shape = RoundedCornerShape(ThumbnailCornerRadius)
-                                    )
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.MusicNote,
-                                    contentDescription = null,
-                                    tint = LocalContentColor.current.copy(alpha = 0.8f),
-                                    modifier = Modifier
-                                        .size(AlbumThumbnailSize / 4 + 16.dp)
-                                        .align(Alignment.Center)
-                                )
-                            }
-                            Text(
-                                text = "Import a playlist to get\nstarted", // TODO: add to R.string
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
-                }
-
-                if (viewModel.importedSongs.isNotEmpty()) {
-                    val songs = viewModel.importedSongs
-                        .filter { !isSearching || queryMatchesSong(searchQuery, it.first.second) }
-                        .filter {
-                            when (importedChipsValue) {
-                                importM3uFilter.IMPORTED -> it.third
-                                importM3uFilter.REJECTED -> !it.third
-                                else -> true
-                            }
-                        }
-                    itemsIndexed(
-                        items = songs.map { (querySong, uuid, found) -> Triple(querySong.second, uuid, found) },
-                        key = { _, (_, uuid, _) -> uuid }
-                    ) { index, (song, uuid, found) ->
-                        ReorderableItem(
-                            state = reorderableState,
-                            key = uuid,
-                        ) {
-                            ListItem(
-                                title = song.song.title,
-                                subtitle = joinByBullet(
-                                    (if (BuildConfig.DEBUG) song.song.id else ""),
-                                    Uri.decode(song.artists.joinToString { it.name }),
-                                    makeTimeString(song.song.duration * 1000L)
-                                ),
-                                badges = {
-                                    if (found) {
-                                        if (song.song.liked) {
-                                            Icon.Favorite()
-                                        }
-                                        if (song.song.isLocal) {
-                                            Icon.FolderCopy()
-                                        } else if (song.song.inLibrary != null) {
-                                            Icon.Library()
-                                        }
-                                        if (LocalDownloadUtil.current.getCustomDownload(song.id)) {
-                                            Icon.Download(Download.STATE_COMPLETED)
-                                        } else {
-                                            val download by LocalDownloadUtil.current.getDownload(song.id)
-                                                .collectAsState(initial = null)
-                                            Icon.Download(download?.state)
-                                        }
-                                    }
-                                },
-                                thumbnailContent = {
-                                    if (found) {
-                                        ItemThumbnail(
-                                            thumbnailUrl = if (song.song.isLocal) song.song.localPath else song.song.thumbnailUrl,
-                                            isActive = false,
-                                            isPlaying = false,
-                                            shape = RoundedCornerShape(ThumbnailCornerRadius),
-                                            modifier = Modifier.size(ListThumbnailSize)
-                                        )
-                                    } else {
-                                        Icon(
-                                            imageVector = Icons.Default.Warning,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(ListThumbnailSize)
-                                        )
-                                    }
-                                },
-                                trailingContent = {
-                                    IconButton(
-                                        onClick = {
-                                            showEditOptions = true
-                                            searchId = index
-                                            haptic.performHapticFeedback(HapticFeedbackType.Companion.ContextClick)
-                                        }
-                                    ) {
-                                        Icon(
-                                            Icons.Rounded.MoreVert,
-                                            contentDescription = null
-                                        )
-                                    }
-                                    IconButton(
-                                        onClick = {},
-                                        modifier = Modifier.draggableHandle()
-                                    ) {
-                                        Icon(
-                                            Icons.Rounded.DragHandle,
-                                            contentDescription = null
-                                        )
-                                    }
-
-                                },
-                                isSelected = false,
-                                isActive = LocalPlayerConnection.current?.mediaMetadata?.collectAsState()?.value?.id == song.id,
-                                modifier = Modifier.clickable {
-                                    if (found) {
-                                        if (song.id == playerConnection?.mediaMetadata?.value?.id) {
-                                            playerConnection.player.togglePlayPause()
-                                        } else {
-                                            playerConnection?.playQueue(
-                                                ListQueue(
-                                                    items = List(1) { song.toMediaMetadata() },
-                                                    startIndex = 0,
-                                                )
-                                            )
-                                        }
-                                    }
-                                }
-                            )
-                        }
-                    }
+                TextButton(
+                    onClick = {
+                        m3uNavController.navigate(Screens.M3uSearch.route)
+                        showEditOptions = false
+                    },
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.SwapHoriz,
+                        contentDescription = null
+                    )
+                    Text(stringResource(R.string.edit))
                 }
             }
-            LazyColumnScrollbar(
-                state = mainListState,
-            )
         }
-
     }
 
     if (showChoosePlaylistDialog) {
@@ -778,7 +974,9 @@ suspend fun loadM3u(
                                 val query = "$title ${Uri.decode(artists.joinToString(" "))}"
                                 if (searchOnline && matches.isEmpty() && source?.contains(',') == false) {
                                     val suggestions = YouTube.searchSuggestions(query).getOrNull()
-                                    val suggestionSongs = suggestions?.recommendedItems.orEmpty().distinctBy { it.id }.filter { it is SongItem }
+                                    val suggestionSongs =
+                                        suggestions?.recommendedItems.orEmpty().distinctBy { it.id }
+                                            .filter { it is SongItem }
                                     suggestionSongs.forEach { suggestion ->
                                         val song = (suggestion as SongItem).toMediaMetadata()
                                         val result = Song(
@@ -843,11 +1041,17 @@ suspend fun loadM3u(
                     delay(10)
                 }
                 unorderedSongs.sortBy { it.first }
-                songs = unorderedSongs.map { (_, querySong, found) -> Triple(querySong, UUID.randomUUID().toString(), found) } as ArrayList<Triple<Pair<String, Song>, String, Boolean>>
+                songs = unorderedSongs.map { (_, querySong, found) ->
+                    Triple(
+                        querySong,
+                        UUID.randomUUID().toString(),
+                        found
+                    )
+                } as ArrayList<Triple<Pair<String, Song>, String, Boolean>>
             }
         }
     }.onFailure {
-        if (it !is CancellationException){
+        if (it !is CancellationException) {
             reportException(it)
             Toast.makeText(context, R.string.m3u_import_playlist_failed, Toast.LENGTH_SHORT).show()
         }
@@ -884,8 +1088,8 @@ fun InputStream.readLines(): List<String> {
     return this.bufferedReader().useLines { it.toList() }
 }
 
-fun queryMatchesSong(query: String, song: Song) : Boolean{
-    val songData = "${song.title} ${Uri.decode(song.artists.joinToString( " "))}"
+fun queryMatchesSong(query: String, song: Song): Boolean {
+    val songData = "${song.title} ${Uri.decode(song.artists.joinToString(" "))}"
     return songData.lowercase().contains(query.lowercase())
 }
 

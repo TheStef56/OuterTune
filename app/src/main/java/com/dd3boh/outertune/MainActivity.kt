@@ -578,7 +578,6 @@ class MainActivity : ComponentActivity() {
                     val (slimNav) = rememberPreference(SlimNavBarKey, defaultValue = false)
                     val (enabledTabs) = rememberPreference(EnabledTabsKey, defaultValue = DEFAULT_ENABLED_TABS)
                     val navigationItems = Screens.getScreens(enabledTabs)
-                    val replaceSong = remember { mutableStateOf<Song?>(null) }
                     val (defaultOpenTab, onDefaultOpenTabChange) = rememberPreference(
                         DefaultOpenTabKey,
                         defaultValue = Screens.Home.route
@@ -672,34 +671,15 @@ class MainActivity : ComponentActivity() {
                     val (query, onQueryChange) = rememberSaveable(stateSaver = TextFieldValue.Saver) {
                         mutableStateOf(TextFieldValue())
                     }
-                    val (queryRep, onQueryRepChange) = rememberSaveable(stateSaver = TextFieldValue.Saver) {
-                        mutableStateOf(TextFieldValue())
-                    }
-
                     var searchActive by rememberSaveable {
                         mutableStateOf(false)
                     }
-
-                    var searchRepActive by rememberSaveable {
-                        mutableStateOf(false)
-                    }
-
                     val onSearchActiveChange: (Boolean) -> Unit = { newActive ->
                         searchActive = newActive
                         if (!newActive) {
                             focusManager.clearFocus()
                             if (navigationItems.fastAny { it.route == navBackStackEntry?.destination?.route }) {
                                 onQueryChange(TextFieldValue())
-                            }
-                        }
-                    }
-
-                    val onRepSearchActiveChange: (Boolean) -> Unit = { newActive ->
-                        searchRepActive = newActive
-                        if (!newActive) {
-                            focusManager.clearFocus()
-                            if (navigationItems.fastAny { it.route == navBackStackEntry?.destination?.route }) {
-                                onQueryRepChange(TextFieldValue())
                             }
                         }
                     }
@@ -723,20 +703,13 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    val onSearchRep: (String) -> Unit = {
-                        if (it.isNotEmpty()) {
-                            onRepSearchActiveChange(false)
-                            navController.navigate("search_rep/${it.urlEncode()}?rep=true")
-                        }
-                    }
-
                     var openSearchImmediately: Boolean by remember {
                         mutableStateOf(intent?.action == ACTION_SEARCH)
                     }
 
                     val shouldHideNavAndPlayer = remember(navBackStackEntry) {
                         navBackStackEntry?.destination?.route?.let {
-                            ((it.startsWith("settings") && !tabMode) || it == "setup_wizard" || it == "login")
+                            ((it.startsWith("settings") && !tabMode) || it.startsWith("library_manager") || it == "setup_wizard" || it == "login")
                         } == true
                     }
 
@@ -838,15 +811,6 @@ class MainActivity : ComponentActivity() {
                             onQueryChange(TextFieldValue())
                         }
 
-                        if (navBackStackEntry?.destination?.route?.startsWith("search_rep/") == true) {
-                            val searchQuery = withContext(Dispatchers.IO) {
-                                navBackStackEntry?.arguments?.getString("query")!!
-                            }
-                            onQueryRepChange(TextFieldValue(searchQuery, TextRange(searchQuery.length)))
-                        } else if (navigationItems.fastAny { it.route == navBackStackEntry?.destination?.route }) {
-                            onQueryRepChange(TextFieldValue())
-                        }
-
                         if (navigationItems.fastAny { it.route == navBackStackEntry?.destination?.route })
                             if (navigationItems.fastAny { it.route == previousTab })
                                 searchBarScrollBehavior.state.resetHeightOffset()
@@ -907,7 +871,8 @@ class MainActivity : ComponentActivity() {
                             val navHost: @Composable() (() -> Unit) = @Composable {
                                 NavHost(
                                     navController = navController,
-                                    startDestination = (tabOpenedFromShortcut ?: Screens.getAllScreens().find { it.route == defaultOpenTab })?.route
+                                    startDestination = (tabOpenedFromShortcut ?: Screens.getAllScreens()
+                                        .find { it.route == defaultOpenTab })?.route
                                         ?: Screens.Home.route,
                                     enterTransition = {
                                         val currentRouteIndex = navigationItems.indexOfFirst {
@@ -989,10 +954,10 @@ class MainActivity : ComponentActivity() {
                                         LibraryAlbumsScreen(navController)
                                     }
                                     composable(Screens.Playlists.route) {
-                                        LibraryPlaylistsScreen(navController = navController, replaceSong = replaceSong)
+                                        LibraryPlaylistsScreen(navController)
                                     }
                                     composable(Screens.Library.route) {
-                                        LibraryScreen(navController, scrollBehavior, replaceSong)
+                                        LibraryScreen(navController, scrollBehavior)
                                     }
                                     composable("history") {
                                         HistoryScreen(navController)
@@ -1006,11 +971,10 @@ class MainActivity : ComponentActivity() {
                                     composable("account") {
                                         AccountScreen(navController, scrollBehavior)
                                     }
-                                    composable("importM3u") {
+                                    composable("library_manager/importM3u") {
                                         ImportM3uScreen(
                                             navController = navController,
                                             scrollBehavior = scrollBehavior,
-                                            replaceSong = replaceSong
                                         )
                                     }
 
@@ -1036,102 +1000,7 @@ class MainActivity : ComponentActivity() {
                                             }
                                         )
                                     ) {
-                                        OnlineSearchResult(
-                                            navController,
-                                            replaceSong
-                                        )
-                                    }
-                                    composable(
-                                        route = "search_rep/{query}?rep={rep}",
-                                        arguments = listOf(
-                                            navArgument("query") {
-                                                type = NavType.StringType
-                                            },
-                                            navArgument("rep") {
-                                                type = NavType.BoolType; defaultValue = true
-                                            }
-                                        )
-                                    ) {
-                                        OnlineSearchResult(
-                                            navController,
-                                            replaceSong,
-                                        )
-                                        SearchBar(
-                                            query = queryRep,
-                                            onQueryChange = onQueryRepChange,
-                                            onSearch = onSearchRep,
-                                            active = searchRepActive,
-                                            onActiveChange = onRepSearchActiveChange,
-                                            scrollBehavior = searchBarScrollBehavior,
-                                            placeholder = {
-                                                Text(
-                                                    text = stringResource(
-                                                        if (!searchActive) R.string.search
-                                                        else {
-                                                            R.string.search_yt_music
-                                                        }
-                                                    )
-                                                )
-                                            },
-                                            leadingIcon = {
-                                                IconButton(
-                                                    onClick = {
-                                                        when {
-                                                            searchRepActive -> onRepSearchActiveChange(
-                                                                false
-                                                            )
-
-                                                            !searchRepActive -> {
-                                                                navController.navigateUp()
-                                                            }
-
-                                                            else -> onRepSearchActiveChange(true)
-                                                        }
-                                                    },
-                                                ) {
-                                                    Icon(
-                                                        imageVector =
-                                                            if (searchActive || navBackStackEntry?.destination?.route?.startsWith(
-                                                                    "search"
-                                                                ) == true
-                                                            ) {
-                                                                Icons.AutoMirrored.Rounded.ArrowBack
-                                                            } else {
-                                                                Icons.Rounded.Search
-                                                            },
-                                                        contentDescription = null
-                                                    )
-                                                }
-                                            },
-                                            trailingIcon = {},
-                                            focusRequester = searchBarFocusRequester,
-                                            modifier = Modifier
-                                                .align(Alignment.TopCenter)
-                                                .windowInsetsPadding(
-                                                    if (shouldShowNavigationRail) {
-                                                        WindowInsets(left = NavigationBarHeight)
-                                                    } else {
-                                                        // please shield your eyes.
-                                                        WindowInsets(0.dp)
-                                                    }
-                                                )
-                                        ) {
-                                            OnlineSearchScreen(
-                                                query = queryRep.text,
-                                                onQueryChange = onQueryRepChange,
-                                                replaceSong = replaceSong,
-                                                navController = navController,
-                                                onSearch = {
-                                                    navController.navigate("search_rep/${it.urlEncode()}?rep=true")
-                                                    if (dataStore[PauseSearchHistoryKey] != true) {
-                                                        database.query {
-                                                            insert(SearchHistory(query = it))
-                                                        }
-                                                    }
-                                                },
-                                                onDismiss = { onRepSearchActiveChange(false) }
-                                            )
-                                        }
+                                        OnlineSearchResult(navController)
                                     }
                                     composable(
                                         route = "album/{albumId}",
@@ -1426,7 +1295,6 @@ class MainActivity : ComponentActivity() {
                                                     query = query.text,
                                                     onQueryChange = onQueryChange,
                                                     navController = navController,
-                                                    replaceSong = replaceSong,
                                                     onSearch = {
                                                         if (youtubeNavigator(it.toUri())) {
                                                             return@OnlineSearchScreen

@@ -1,6 +1,5 @@
 package com.dd3boh.outertune.ui.screens.search
 
-import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
@@ -20,12 +19,10 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -46,8 +43,6 @@ import com.dd3boh.outertune.R
 import com.dd3boh.outertune.constants.AppBarHeight
 import com.dd3boh.outertune.constants.SearchFilterHeight
 import com.dd3boh.outertune.constants.SwipeToQueueKey
-import com.dd3boh.outertune.db.entities.ArtistEntity
-import com.dd3boh.outertune.db.entities.Song
 import com.dd3boh.outertune.extensions.toMediaItem
 import com.dd3boh.outertune.extensions.togglePlayPause
 import com.dd3boh.outertune.models.toMediaMetadata
@@ -67,7 +62,6 @@ import com.dd3boh.outertune.ui.menu.YouTubePlaylistMenu
 import com.dd3boh.outertune.ui.menu.YouTubeSongMenu
 import com.dd3boh.outertune.utils.rememberPreference
 import com.dd3boh.outertune.viewmodels.OnlineSearchViewModel
-import com.zionhuang.innertube.YouTube
 import com.zionhuang.innertube.YouTube.SearchFilter.Companion.FILTER_ALBUM
 import com.zionhuang.innertube.YouTube.SearchFilter.Companion.FILTER_ARTIST
 import com.zionhuang.innertube.YouTube.SearchFilter.Companion.FILTER_COMMUNITY_PLAYLIST
@@ -86,10 +80,8 @@ import java.net.URLDecoder
 @Composable
 fun OnlineSearchResult(
     navController: NavController,
-    replaceSong: MutableState<Song?>,
     viewModel: OnlineSearchViewModel = hiltViewModel(),
 ) {
-    val isReplaceSong = navController.currentBackStackEntry?.destination?.route?.startsWith("search_rep") == true
     val context = LocalContext.current
     val menuState = LocalMenuState.current
     val playerConnection = LocalPlayerConnection.current ?: return
@@ -105,13 +97,10 @@ fun OnlineSearchResult(
 
     val searchFilter by viewModel.filter.collectAsState()
     val searchSummary = viewModel.summaryPage
-
-    val itemsPage by remember(searchFilter, isReplaceSong) {
+    val itemsPage by remember(searchFilter) {
         derivedStateOf {
-            if (!isReplaceSong) {
-                searchFilter?.value?.let { viewModel.viewStateMap[it] }
-            } else {
-                viewModel.viewStateMap[YouTube.SearchFilter.FILTER_SONG.value]
+            searchFilter?.value?.let {
+                viewModel.viewStateMap[it]
             }
         }
     }
@@ -128,68 +117,48 @@ fun OnlineSearchResult(
     val ytItemContent: @Composable LazyItemScope.(YTItem, List<YTItem>) -> Unit =
         { item: YTItem, collection: List<YTItem> ->
             val content: @Composable () -> Unit = {
-                val isActive = if (isReplaceSong) mediaMetadata?.id == item.id else {
-                    when (item) {
+                YouTubeListItem(
+                    item = item,
+                    isActive = when (item) {
                         is SongItem -> mediaMetadata?.id == item.id
                         is AlbumItem -> mediaMetadata?.album?.id == item.id
                         else -> false
-                    }
-                }
-                YouTubeListItem(
-                    item = item,
-                    isActive = isActive,
+                    },
                     isPlaying = isPlaying,
                     trailingContent = {
                         IconButton(
                             onClick = {
-                                if (!isReplaceSong) {
-                                    menuState.show {
-                                        when (item) {
-                                            is SongItem -> YouTubeSongMenu(
-                                                song = item,
-                                                navController = navController,
-                                                onDismiss = menuState::dismiss
-                                            )
+                                menuState.show {
+                                    when (item) {
+                                        is SongItem -> YouTubeSongMenu(
+                                            song = item,
+                                            navController = navController,
+                                            onDismiss = menuState::dismiss
+                                        )
 
-                                            is AlbumItem -> YouTubeAlbumMenu(
-                                                albumItem = item,
-                                                navController = navController,
-                                                onDismiss = menuState::dismiss
-                                            )
+                                        is AlbumItem -> YouTubeAlbumMenu(
+                                            albumItem = item,
+                                            navController = navController,
+                                            onDismiss = menuState::dismiss
+                                        )
 
-                                            is ArtistItem -> YouTubeArtistMenu(
-                                                artist = item,
-                                                onDismiss = menuState::dismiss
-                                            )
+                                        is ArtistItem -> YouTubeArtistMenu(
+                                            artist = item,
+                                            onDismiss = menuState::dismiss
+                                        )
 
-                                            is PlaylistItem -> YouTubePlaylistMenu(
-                                                navController = navController,
-                                                playlist = item,
-                                                coroutineScope = coroutineScope,
-                                                onDismiss = menuState::dismiss
-                                            )
-                                        }
-                                    }
-                                } else {
-                                    val songItem = item as SongItem
-                                    val mediaData = songItem.toMediaMetadata()
-                                    replaceSong.value = Song(
-                                        song = mediaData.toSongEntity(),
-                                        artists = mediaData.artists.map {
-                                            ArtistEntity(
-                                                id = it.id ?: ArtistEntity.generateArtistId(),
-                                                name = it.name
-                                            )
-                                        }
-                                    )
-                                    while (navController.currentBackStackEntry?.destination?.route?.startsWith("search_rep") == true) {
-                                        navController.popBackStack()
+                                        is PlaylistItem -> YouTubePlaylistMenu(
+                                            navController = navController,
+                                            playlist = item,
+                                            coroutineScope = coroutineScope,
+                                            onDismiss = menuState::dismiss
+                                        )
                                     }
                                 }
                             }
                         ) {
                             Icon(
-                                if (!isReplaceSong) Icons.Rounded.MoreVert else Icons.Rounded.SwapHoriz,
+                                Icons.Rounded.MoreVert,
                                 contentDescription = null
                             )
                         }
@@ -225,19 +194,16 @@ fun OnlineSearchResult(
                                     is PlaylistItem -> navController.navigate("online_playlist/${item.id}")
                                 }
                             },
-
                             onLongClick = {
-                                if (!isReplaceSong){
-                                    menuState.show {
-                                        when (item) {
-                                            is SongItem -> YouTubeSongMenu(
-                                                song = item,
-                                                navController = navController,
-                                                onDismiss = menuState::dismiss
-                                            )
+                                menuState.show {
+                                    when (item) {
+                                        is SongItem -> YouTubeSongMenu(
+                                            song = item,
+                                            navController = navController,
+                                            onDismiss = menuState::dismiss
+                                        )
 
-                                            else -> {}
-                                        }
+                                        else -> {}
                                     }
                                 }
                             }
@@ -261,7 +227,7 @@ fun OnlineSearchResult(
             .add(WindowInsets(top = SearchFilterHeight))
             .asPaddingValues()
     ) {
-        if (searchFilter == null && !isReplaceSong) {
+        if (searchFilter == null) {
             searchSummary?.summaries?.forEach { summary ->
                 item {
                     NavigationTitle(summary.title)
@@ -313,7 +279,7 @@ fun OnlineSearchResult(
             }
         }
 
-        if ((searchFilter == null && searchSummary == null || searchFilter != null && itemsPage == null) && !isReplaceSong) {
+        if (searchFilter == null && searchSummary == null || searchFilter != null && itemsPage == null) {
             item {
                 ShimmerHost {
                     repeat(8) {
@@ -337,29 +303,28 @@ fun OnlineSearchResult(
                 .align(Alignment.BottomCenter)
         )
     }
-    if (!isReplaceSong) {
-        ChipsRow(
-            chips = listOf(
-                null to stringResource(R.string.filter_all),
-                FILTER_SONG to stringResource(R.string.filter_songs),
-                FILTER_VIDEO to stringResource(R.string.filter_videos),
-                FILTER_ALBUM to stringResource(R.string.filter_albums),
-                FILTER_ARTIST to stringResource(R.string.filter_artists),
-                FILTER_COMMUNITY_PLAYLIST to stringResource(R.string.filter_community_playlists),
-                FILTER_FEATURED_PLAYLIST to stringResource(R.string.filter_featured_playlists)
-            ),
-            currentValue = searchFilter,
-            onValueUpdate = {
-                if (viewModel.filter.value != it) {
-                    viewModel.filter.value = it
-                }
-                coroutineScope.launch {
-                    lazyListState.animateScrollToItem(0)
-                }
-            },
-            modifier = Modifier
-                .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top))
-                .padding(top = AppBarHeight)
-        )
-    }
+
+    ChipsRow(
+        chips = listOf(
+            null to stringResource(R.string.filter_all),
+            FILTER_SONG to stringResource(R.string.filter_songs),
+            FILTER_VIDEO to stringResource(R.string.filter_videos),
+            FILTER_ALBUM to stringResource(R.string.filter_albums),
+            FILTER_ARTIST to stringResource(R.string.filter_artists),
+            FILTER_COMMUNITY_PLAYLIST to stringResource(R.string.filter_community_playlists),
+            FILTER_FEATURED_PLAYLIST to stringResource(R.string.filter_featured_playlists)
+        ),
+        currentValue = searchFilter,
+        onValueUpdate = {
+            if (viewModel.filter.value != it) {
+                viewModel.filter.value = it
+            }
+            coroutineScope.launch {
+                lazyListState.animateScrollToItem(0)
+            }
+        },
+        modifier = Modifier
+            .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top))
+            .padding(top = AppBarHeight)
+    )
 }

@@ -35,7 +35,6 @@ import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -75,7 +74,6 @@ import com.dd3boh.outertune.db.entities.Album
 import com.dd3boh.outertune.db.entities.Artist
 import com.dd3boh.outertune.db.entities.Playlist
 import com.dd3boh.outertune.db.entities.PlaylistEntity
-import com.dd3boh.outertune.db.entities.Song
 import com.dd3boh.outertune.ui.component.ChipsLazyRow
 import com.dd3boh.outertune.ui.component.EmptyPlaceholder
 import com.dd3boh.outertune.ui.component.LazyColumnScrollbar
@@ -102,7 +100,6 @@ import com.dd3boh.outertune.viewmodels.LibraryViewModel
 fun LibraryScreen(
     navController: NavController,
     scrollBehavior: TopAppBarScrollBehavior,
-    replaceSong: MutableState<Song?>,
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
     val menuState = LocalMenuState.current
@@ -315,7 +312,6 @@ fun LibraryScreen(
             LibraryFilter.PLAYLISTS ->
                 LibraryPlaylistsScreen(
                     navController,
-                    replaceSong = replaceSong,
                     libraryFilterContent = filterContent
                 )
 

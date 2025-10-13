@@ -98,7 +98,6 @@ import com.dd3boh.outertune.viewmodels.LibraryPlaylistsViewModel
 fun LibraryPlaylistsScreen(
     navController: NavController,
     viewModel: LibraryPlaylistsViewModel = hiltViewModel(),
-    replaceSong: MutableState<Song?>,
     libraryFilterContent: @Composable() (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
@@ -254,7 +253,7 @@ fun LibraryPlaylistsScreen(
                         DropdownItem(
                             title = stringResource(R.string.import_playlist),
                             leadingIcon = { Icon(Icons.AutoMirrored.Rounded.Input, null) },
-                            action = { navController.navigate("importM3u") }
+                            action = { navController.navigate("library_manager/importM3u") }
                         ),
                     ),
                 )
