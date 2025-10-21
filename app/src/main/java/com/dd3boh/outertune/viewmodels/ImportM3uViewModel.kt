@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.dd3boh.outertune.db.MusicDatabase
 import com.dd3boh.outertune.db.entities.Song
 import com.dd3boh.outertune.models.ItemsPage
+import com.dd3boh.outertune.ui.screens.ImportM3uFilter
 import com.dd3boh.outertune.utils.reportException
 import com.zionhuang.innertube.YouTube
 import com.zionhuang.innertube.models.SongItem
@@ -28,7 +29,7 @@ class ImportM3uViewModel @Inject constructor(
     database: MusicDatabase,
 ): ViewModel() {
     val scope = CoroutineScope(Dispatchers.IO)
-    val importedSongs = mutableStateListOf<Triple<Pair<String, Song>, String, Boolean>>()
+    val importedSongs = mutableStateListOf<ImportedSong>()
     var onlineResult = MutableStateFlow<ItemsPage?>(null)
 
 
@@ -80,3 +81,9 @@ class ImportM3uViewModel @Inject constructor(
 
     }
 }
+
+data class ImportedSong(
+    val querySong: Pair<String, Song>,
+    val uuid: String,
+    val status: ImportM3uFilter
+)

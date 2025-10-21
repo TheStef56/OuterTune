@@ -58,6 +58,14 @@ We recycle translations from upstream, they are pulled periodically. -->
     <string name="filter_bookmarked">Bookmarked</string>
     <string name="no_results_found">No results found</string>
 
+    <!-- M3uImport -->
+    <string name="import_m3u">Import m3u</string>
+    <string name="filter_imported">Imported</string>
+    <string name="filter_missing">Missing</string>
+    <string name="filter_mismatch">Mismatch</string>
+    <string name="import_playlist_to_get_started">Import a playlist to get
+        started</string>
+
     <!-- Library -->
     <string name="library_song_empty">Library songs will show up here</string>
     <string name="library_artist_empty">Library artists will show up here</string>
@@ -93,6 +101,8 @@ We recycle translations from upstream, they are pulled periodically. -->
     <string name="add_to_library">Add to library</string>
     <string name="add_all_to_library">Add all to library</string>
     <string name="remove_from_library">Remove from library</string>
+    <string name="swap_song">Swap song</string>
+    <string name="delete_import">Remove import</string>
     <string name="remove_all_from_library">Remove all from library</string>
     <string name="action_download">Download</string>
     <string name="downloading">Downloading</string>

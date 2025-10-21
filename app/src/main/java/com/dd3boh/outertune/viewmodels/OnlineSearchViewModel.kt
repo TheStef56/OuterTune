@@ -21,12 +21,31 @@ class OnlineSearchViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
     val query = savedStateHandle.get<String>("query")!!
+    val route = savedStateHandle.get<String>("route") ?: "" // ← optional route key if passed
     val filter = MutableStateFlow<YouTube.SearchFilter?>(null)
     var summaryPage by mutableStateOf<SearchSummaryPage?>(null)
     val viewStateMap = mutableStateMapOf<String, ItemsPage?>()
 
     init {
         viewModelScope.launch {
+            // CASE 1 — Route starts with "search_sub"
+            if (route.startsWith("search_sub")) {
+                if (viewStateMap[YouTube.SearchFilter.FILTER_SONG.value] == null) {
+                    YouTube.search(query, YouTube.SearchFilter.FILTER_SONG)
+                        .onSuccess { result ->
+                            viewStateMap[YouTube.SearchFilter.FILTER_SONG.value] = ItemsPage(
+                                result.items.distinctBy { it.id },
+                                result.continuation
+                            )
+                        }
+                        .onFailure {
+                            reportException(it)
+                        }
+                }
+                return@launch
+            }
+
+            // CASE 2 — Normal online search
             filter.collect { filter ->
                 if (filter == null) {
                     if (summaryPage == null) {
@@ -42,7 +61,10 @@ class OnlineSearchViewModel @Inject constructor(
                     if (viewStateMap[filter.value] == null) {
                         YouTube.search(query, filter)
                             .onSuccess { result ->
-                                viewStateMap[filter.value] = ItemsPage(result.items.distinctBy { it.id }, result.continuation)
+                                viewStateMap[filter.value] = ItemsPage(
+                                    result.items.distinctBy { it.id },
+                                    result.continuation
+                                )
                             }
                             .onFailure {
                                 reportException(it)
@@ -54,14 +76,33 @@ class OnlineSearchViewModel @Inject constructor(
     }
 
     fun loadMore() {
-        val filter = filter.value?.value
         viewModelScope.launch {
+            // CASE 1 — Route starts with "search_sub"
+            if (route.startsWith("search_sub")) {
+                val filter = YouTube.SearchFilter.FILTER_SONG.value
+                val viewState = viewStateMap[filter] ?: return@launch
+                val continuation = viewState.continuation ?: return@launch
+                val searchResult =
+                    YouTube.searchContinuation(continuation).getOrNull() ?: return@launch
+                viewStateMap[filter] = ItemsPage(
+                    (viewState.items + searchResult.items).distinctBy { it.id },
+                    searchResult.continuation
+                )
+                return@launch
+            }
+
+            // CASE 2 — Normal online search
+            val filter = filter.value?.value
             if (filter == null) return@launch
             val viewState = viewStateMap[filter] ?: return@launch
             val continuation = viewState.continuation
             if (continuation != null) {
-                val searchResult = YouTube.searchContinuation(continuation).getOrNull() ?: return@launch
-                viewStateMap[filter] = ItemsPage((viewState.items + searchResult.items).distinctBy { it.id }, searchResult.continuation)
+                val searchResult =
+                    YouTube.searchContinuation(continuation).getOrNull() ?: return@launch
+                viewStateMap[filter] = ItemsPage(
+                    (viewState.items + searchResult.items).distinctBy { it.id },
+                    searchResult.continuation
+                )
             }
         }
     }

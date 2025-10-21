@@ -589,7 +589,7 @@ fun PlayerMenu(
                     insert(mediaMetadata)
                 }
 
-                playlist.playlist.browseId?.let { YouTube.addToPlaylist(it, mediaMetadata.id) }
+                playlist!!.playlist.browseId?.let { YouTube.addToPlaylist(it, mediaMetadata.id) }
 
                 listOf(mediaMetadata.id)
             },

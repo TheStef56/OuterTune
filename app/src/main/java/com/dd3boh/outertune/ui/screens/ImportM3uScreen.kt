@@ -10,6 +10,7 @@ package com.dd3boh.outertune.ui.screens
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -47,7 +48,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.LibraryMusic
@@ -64,7 +64,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
@@ -106,6 +105,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.dd3boh.outertune.LocalDatabase
+import com.dd3boh.outertune.LocalMenuState
 import com.dd3boh.outertune.LocalPlayerAwareWindowInsets
 import com.dd3boh.outertune.LocalSnackbarHostState
 import com.dd3boh.outertune.R
@@ -133,13 +133,15 @@ import com.dd3boh.outertune.ui.component.items.YouTubeListItem
 import com.dd3boh.outertune.ui.component.shimmer.ListItemPlaceHolder
 import com.dd3boh.outertune.ui.component.shimmer.ShimmerHost
 import com.dd3boh.outertune.ui.dialog.AddToPlaylistDialog
-import com.dd3boh.outertune.ui.dialog.DefaultDialog
+import com.dd3boh.outertune.ui.menu.ImportSongMenu
 import com.dd3boh.outertune.ui.utils.backToMain
+import com.dd3boh.outertune.utils.lmScannerCoroutine
 import com.dd3boh.outertune.utils.rememberEnumPreference
 import com.dd3boh.outertune.utils.reportException
 import com.dd3boh.outertune.utils.scanners.LocalMediaScanner
 import com.dd3boh.outertune.utils.scanners.LocalMediaScanner.Companion.compareM3uSong
 import com.dd3boh.outertune.viewmodels.ImportM3uViewModel
+import com.dd3boh.outertune.viewmodels.ImportedSong
 import com.zionhuang.innertube.YouTube
 import com.zionhuang.innertube.models.SongItem
 import com.zionhuang.innertube.models.YTItem
@@ -174,6 +176,9 @@ fun ImportM3uScreen(
     scrollBehavior: TopAppBarScrollBehavior,
     viewModel: ImportM3uViewModel = hiltViewModel()
 ) {
+    val redError = Color(0.949f, 0.188f, 0.133f)
+    val orangeWarning = Color(0.961f, 0.682f, 0.443f)
+
     val context = LocalContext.current
     val database = LocalDatabase.current
     val focusRequester = remember { FocusRequester() }
@@ -219,6 +224,10 @@ fun ImportM3uScreen(
         selection.clear()
     }
 
+    val navigationItems = listOf(Screens.M3uList, Screens.M3uSearch)
+    val m3uNavController = rememberNavController()
+    val navBackStackEntry by m3uNavController.currentBackStackEntryAsState()
+
     // search
     var isSearching by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable(stateSaver = TextFieldValue.Saver) {
@@ -251,15 +260,12 @@ fun ImportM3uScreen(
 
     val haptic = LocalHapticFeedback.current
 
-    var importedChipsValue by remember { mutableStateOf(importM3uFilter.ALL) }
-
-
-    var showEditOptions by remember { mutableStateOf(false) }
+    var importedChipsValue by remember { mutableStateOf<ImportM3uFilter>(ImportM3uFilter.ALL) }
 
     val importJob = remember { SupervisorJob() }
 
     val importScope = remember {
-        CoroutineScope(importJob + Dispatchers.IO)
+        CoroutineScope(importJob + lmScannerCoroutine)
     }
 
     DisposableEffect(Unit) {
@@ -299,10 +305,6 @@ fun ImportM3uScreen(
 
 
     val windowInsets = LocalPlayerAwareWindowInsets.current.union(WindowInsets.ime)
-
-    val navigationItems = listOf(Screens.M3uList, Screens.M3uSearch)
-    val m3uNavController = rememberNavController()
-    val navBackStackEntry by m3uNavController.currentBackStackEntryAsState()
 
     fun handleBack() {
         if (navBackStackEntry?.destination?.route?.let { (it == Screens.M3uSearch.route) } == true) {
@@ -382,8 +384,12 @@ fun ImportM3uScreen(
                         isSearching = false
                         query = TextFieldValue()
                     }
+                } else {
+                    BackHandler {
+                        navController.navigateUp()
+                    }
                 }
-
+                val menuState = LocalMenuState.current
                 LazyColumn(
                     state = mainListState,
                     contentPadding = windowInsets.asPaddingValues()
@@ -445,17 +451,17 @@ fun ImportM3uScreen(
                                     },
                                     enabled = !isLoading
                                 ) {
-                                    Text("import m3u") // TODO: add to R.string
+                                    Text(stringResource(R.string.import_m3u))
                                 }
                             }
 
                             if (viewModel.importedSongs.isNotEmpty()) {
                                 ChipsRow(
                                     chips = listOf(
-                                        // TODO: m3u: string resource
-                                        importM3uFilter.ALL to "${stringResource(R.string.filter_all)} (${viewModel.importedSongs.size})",
-                                        importM3uFilter.IMPORTED to "Imported (${viewModel.importedSongs.filter { it.third }.size})",
-                                        importM3uFilter.REJECTED to "Rejected (${viewModel.importedSongs.filter { !it.third }.size})",
+                                        ImportM3uFilter.ALL to "${stringResource(R.string.filter_all)} (${viewModel.importedSongs.size})",
+                                        ImportM3uFilter.IMPORTED to "${stringResource(R.string.filter_imported)} (${viewModel.importedSongs.filter { it.status == ImportM3uFilter.IMPORTED || it.status == ImportM3uFilter.MISMATCH}.size})",
+                                        ImportM3uFilter.MISSING to "${stringResource(R.string.filter_missing)} (${viewModel.importedSongs.filter { it.status == ImportM3uFilter.MISSING }.size})",
+                                        ImportM3uFilter.MISMATCH to "${stringResource(R.string.filter_mismatch)} (${viewModel.importedSongs.filter { it.status == ImportM3uFilter.MISMATCH }.size})",
                                     ),
                                     currentValue = importedChipsValue,
                                     onValueUpdate = { importedChipsValue = it }
@@ -516,7 +522,7 @@ fun ImportM3uScreen(
                                     )
                                 }
                                 Text(
-                                    text = "Import a playlist to get\nstarted", // TODO: add to R.string
+                                    text = stringResource(R.string.import_playlist_to_get_started), // TODO: add to R.string
                                     textAlign = TextAlign.Center
                                 )
                             }
@@ -525,30 +531,47 @@ fun ImportM3uScreen(
 
                     if (viewModel.importedSongs.isNotEmpty()) {
                         val songs = viewModel.importedSongs
-                            .filter { !isSearching || queryMatchesSong(query.text, it.first.second) }
+                            .filter { !isSearching || queryMatchesSong(query.text, it.querySong.second) }
                             .filter {
                                 when (importedChipsValue) {
-                                    importM3uFilter.IMPORTED -> it.third
-                                    importM3uFilter.REJECTED -> !it.third
+                                    ImportM3uFilter.IMPORTED -> it.status == ImportM3uFilter.IMPORTED || it.status == ImportM3uFilter.MISMATCH
+                                    ImportM3uFilter.MISSING -> it.status == ImportM3uFilter.MISSING
+                                    ImportM3uFilter.MISMATCH -> it.status == ImportM3uFilter.MISMATCH
                                     else -> true
                                 }
                             }
                         itemsIndexed(
-                            items = songs.map { (querySong, uuid, found) -> Triple(querySong.second, uuid, found) },
+                            items = songs,
                             key = { _, (_, uuid, _) -> uuid }
-                        ) { index, (song, uuid, found) ->
+                        ) { index, (querySong, uuid, status) ->
                             ReorderableItem(
                                 state = reorderableState,
                                 key = uuid,
                             ) {
                                 M3uSongListItem(
-                                    song = song,
-                                    isMissing = !found,
+                                    song = querySong.second,
+                                    isMissing = status == ImportM3uFilter.MISSING,
                                     onEditClick = {
-                                        showEditOptions = true
+                                        menuState.show {
+                                            ImportSongMenu (
+                                                song = querySong.second,
+                                                modelIndex = Pair(viewModel, index),
+                                                navController = m3uNavController,
+                                                onDismiss = menuState::dismiss
+                                            )
+                                        }
                                         searchId = index
                                         haptic.performHapticFeedback(HapticFeedbackType.Companion.ContextClick)
+                                        onSearchQueryChange(TextFieldValue(querySong.first))
                                     },
+                                    modifier = Modifier
+                                        .background (
+                                            when (status) {
+                                                ImportM3uFilter.MISSING -> redError         // default MaterialTheme looked like shi
+                                                ImportM3uFilter.MISMATCH -> orangeWarning
+                                                else ->  MaterialTheme.colorScheme.background
+                                            }
+                                        )
                                 )
                             }
                         }
@@ -558,10 +581,6 @@ fun ImportM3uScreen(
             composable(Screens.M3uSearch.route) {
                 val searchBarFocusRequester = remember { FocusRequester() }
 
-                BackHandler {
-                    handleBack()
-                }
-
                 SearchBar(
                     query = searchQuery,
                     onQueryChange = onSearchQueryChange,
@@ -569,7 +588,9 @@ fun ImportM3uScreen(
                         onSearchQueryChange(TextFieldValue(it))
                     },
                     active = true,
-                    onActiveChange = { },
+                    onActiveChange = { notShouldExit ->
+                        if (!notShouldExit) handleBack()
+                    },
                     scrollBehavior = scrollBehavior,
                     placeholder = {
                         Text(
@@ -634,13 +655,13 @@ fun ImportM3uScreen(
                                         M3uSongSearchListItem(
                                             song = item,
                                             onSearchResultClick = {
-                                                val prevSongQuery = viewModel.importedSongs[searchId].first
+                                                val prevSongQuery = viewModel.importedSongs[searchId].querySong.first
                                                 viewModel.importedSongs[searchId] =
-                                                    Triple(
+                                                    ImportedSong(
                                                         Pair(prevSongQuery, item),
                                                         UUID.randomUUID().toString(),
-                                                        true
-                                                    ) as Triple<Pair<String, Song>, String, Boolean> // TODO: m3u: why
+                                                        ImportM3uFilter.IMPORTED
+                                                    )
 
                                                 m3uNavController.navigate(Screens.M3uList.route)
                                                 onSearchQueryChange(TextFieldValue())
@@ -666,7 +687,7 @@ fun ImportM3uScreen(
                                     { item: YTItem, collection: List<YTItem> ->
                                         fun onClick() {
                                             val prevSongQuery =
-                                                viewModel.importedSongs[searchId].first
+                                                viewModel.importedSongs[searchId].querySong.first
                                             val songItem = (item as? SongItem)
                                             if (songItem == null) return
                                             val song = Song(
@@ -680,10 +701,11 @@ fun ImportM3uScreen(
                                                 }
                                             )
                                             viewModel.importedSongs[searchId] =
-                                                Triple(
+                                                ImportedSong(
                                                     Pair(prevSongQuery, song),
-                                                    UUID.randomUUID().toString(), true
-                                                ) as Triple<Pair<String, Song>, String, Boolean>
+                                                    UUID.randomUUID().toString(),
+                                                    ImportM3uFilter.IMPORTED
+                                                )
 
                                             m3uNavController.navigate(Screens.M3uList.route)
                                             onSearchQueryChange(TextFieldValue())
@@ -851,47 +873,15 @@ fun ImportM3uScreen(
 //        )
     }
 
-
-    if (showEditOptions) {
-        DefaultDialog(
-            onDismiss = { showEditOptions = false },
-            title = { Text(stringResource(R.string.options)) },
-        ) {
-            Column() {
-                TextButton(
-                    onClick = {
-                        viewModel.importedSongs.removeAt(searchId)
-                        showEditOptions = false
-                    },
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Delete,
-                        contentDescription = null
-                    )
-                    Text(stringResource(R.string.delete))
-                }
-                TextButton(
-                    onClick = {
-                        m3uNavController.navigate(Screens.M3uSearch.route)
-                        showEditOptions = false
-                    },
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.SwapHoriz,
-                        contentDescription = null
-                    )
-                    Text(stringResource(R.string.edit))
-                }
-            }
-        }
-    }
-
     if (showChoosePlaylistDialog) {
         AddToPlaylistDialog(
             navController = navController,
             allowSyncing = false,
             initialTextFieldValue = importedTitle,
-            songIds = viewModel.importedSongs.filter { it.third }.map { (querySong, _, _) -> querySong.second.id },
+            songIds = viewModel.importedSongs.filter {
+                it.status == ImportM3uFilter.IMPORTED ||
+                it.status == ImportM3uFilter.MISMATCH
+            }.map { (querySong, _, _) -> querySong.second.id },
             onPreAdd = {
                 viewModel.importedSongs.map { (querySong, _, _) -> querySong.second }.forEach {
                     database.insert(it.toMediaMetadata())
@@ -919,10 +909,10 @@ suspend fun loadM3u(
     matchStrength: ScannerM3uMatchCriteria = ScannerM3uMatchCriteria.LEVEL_1,
     searchOnline: Boolean = false,
     onPercentageChange: (Int) -> Unit
-): Pair<ArrayList<Triple<Pair<String, Song>, String, Boolean>>, String> = withContext(Dispatchers.IO) {
-    val unorderedSongs = ArrayList<Triple<Int, Pair<String, Song>, Boolean>>()
+): Pair<ArrayList<ImportedSong>, String> = withContext(Dispatchers.IO) {
+    val unorderedSongs = ArrayList<Pair<Int, ImportedSong>>()
 
-    var songs = ArrayList<Triple<Pair<String, Song>, String, Boolean>>()
+    var songs = ArrayList<ImportedSong>()
     var toProcess: Int
     var processed = 0
 
@@ -1010,7 +1000,16 @@ suspend fun loadM3u(
 
                                 // take first song when searching on YTM
                                 if (matchStrength == ScannerM3uMatchCriteria.LEVEL_0 && searchOnline && matches.isNotEmpty()) {
-                                    unorderedSongs.add(Triple(index, Pair(query, matches.first()), true))
+                                    unorderedSongs.add(
+                                        Pair(
+                                            index,
+                                            ImportedSong(
+                                                querySong = Pair(query, matches.first()),
+                                                uuid = UUID.randomUUID().toString(),
+                                                status = if (matches.first().title == title) ImportM3uFilter.IMPORTED else ImportM3uFilter.MISMATCH
+                                            )
+                                        )
+                                    )
                                 } else {
                                     for (s in matches) {
                                         if (compareM3uSong(
@@ -1019,14 +1018,32 @@ suspend fun loadM3u(
                                                 matchStrength = matchStrength
                                             )
                                         ) {
-                                            unorderedSongs.add(Triple(index, Pair(query, s), true))
+                                            unorderedSongs.add(
+                                                Pair(
+                                                    index,
+                                                    ImportedSong(
+                                                        querySong = Pair(query, s),
+                                                        uuid = UUID.randomUUID().toString(),
+                                                        status = if (s.title == title) ImportM3uFilter.IMPORTED else ImportM3uFilter.MISMATCH
+                                                    )
+                                                )
+                                            )
                                             break
                                         }
                                     }
                                 }
 
                                 if (oldSize == unorderedSongs.size) {
-                                    unorderedSongs.add(Triple(index, Pair(query, mockSong), false))
+                                    unorderedSongs.add(
+                                        Pair(
+                                            index,
+                                            ImportedSong(
+                                                querySong = Pair(query, mockSong),
+                                                uuid = UUID.randomUUID().toString(),
+                                                status = ImportM3uFilter.MISSING
+                                            )
+                                        )
+                                    )
                                 }
                                 processed++
                                 val percent = if (toProcess > 0)
@@ -1041,13 +1058,9 @@ suspend fun loadM3u(
                     delay(10)
                 }
                 unorderedSongs.sortBy { it.first }
-                songs = unorderedSongs.map { (_, querySong, found) ->
-                    Triple(
-                        querySong,
-                        UUID.randomUUID().toString(),
-                        found
-                    )
-                } as ArrayList<Triple<Pair<String, Song>, String, Boolean>>
+                songs = unorderedSongs.map { (_, importedSong) ->
+                    importedSong
+                } as ArrayList<ImportedSong>
             }
         }
     }.onFailure {
@@ -1093,6 +1106,6 @@ fun queryMatchesSong(query: String, song: Song): Boolean {
     return songData.lowercase().contains(query.lowercase())
 }
 
-enum class importM3uFilter {
-    ALL, IMPORTED, REJECTED
+enum class ImportM3uFilter {
+    ALL, IMPORTED, MISSING, MISMATCH
 }
