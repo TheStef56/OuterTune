@@ -68,7 +68,6 @@ import com.dd3boh.outertune.ui.component.button.IconButton
 import com.dd3boh.outertune.ui.menu.FolderMenu
 import com.dd3boh.outertune.ui.menu.MenuState
 import com.dd3boh.outertune.ui.menu.SongMenu
-import com.dd3boh.outertune.ui.screens.Screens
 import com.dd3boh.outertune.utils.joinByBullet
 import com.dd3boh.outertune.utils.makeTimeString
 import kotlinx.coroutines.CoroutineScope
@@ -76,7 +75,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableCollectionItemScope
-import sh.calvin.reorderable.ReorderableItem
 import java.util.UUID
 import kotlin.math.roundToInt
 
@@ -252,12 +250,9 @@ fun ReorderableCollectionItemScope.M3uSongListItem(
                 } else if (song.song.inLibrary != null) {
                     Icon.Library()
                 }
-                if (LocalDownloadUtil.current.getCustomDownload(song.id)) {
-                    Icon.Download(Download.STATE_COMPLETED)
-                } else {
-                    val download by LocalDownloadUtil.current.getDownload(song.id)
-                        .collectAsState(initial = null)
-                    Icon.Download(download?.state)
+                if (!song.song.isLocal) {
+                    val downloads by LocalDownloadUtil.current.downloads.collectAsState()
+                    Icon.Download(downloads[song.id])
                 }
             }
         },
@@ -327,12 +322,9 @@ fun M3uSongSearchListItem(
                 } else if (song.song.inLibrary != null) {
                     Icon.Library()
                 }
-                if (LocalDownloadUtil.current.getCustomDownload(song.id)) {
-                    Icon.Download(Download.STATE_COMPLETED)
-                } else {
-                    val download by LocalDownloadUtil.current.getDownload(song.id)
-                        .collectAsState(initial = null)
-                    Icon.Download(download?.state)
+                if (!song.song.isLocal) {
+                    val downloads by LocalDownloadUtil.current.downloads.collectAsState()
+                    Icon.Download(downloads[song.id])
                 }
         },
         thumbnailContent = {
@@ -482,7 +474,7 @@ fun SongGridItem(
                     .padding(end = 2.dp)
             )
         }
-        if (showDownloadIcon) {
+        if (showDownloadIcon && !song.song.isLocal) {
             val download by LocalDownloadUtil.current.getDownload(song.id).collectAsState(initial = null)
             Icon.Download(download)
         }
