@@ -709,7 +709,7 @@ class MainActivity : ComponentActivity() {
 
                     val shouldHideNavAndPlayer = remember(navBackStackEntry) {
                         navBackStackEntry?.destination?.route?.let {
-                            ((it.startsWith("settings") && !tabMode) || it.startsWith("library_manager") || it == "setup_wizard" || it == "login")
+                            ((it.startsWith("settings") && !tabMode) || it == "setup_wizard" || it == "login")
                         } == true
                     }
 
@@ -720,9 +720,9 @@ class MainActivity : ComponentActivity() {
                     }
 
                     val shouldShowNavigationBar = remember(navBackStackEntry, searchActive, shouldHideNavAndPlayer) {
-                        (!useRail || tabMode) && !searchActive && !shouldHideNavAndPlayer && navBackStackEntry?.destination?.route?.startsWith(
-                            "settings"
-                        ) != true
+                        (!useRail || tabMode) && !searchActive && !shouldHideNavAndPlayer && navBackStackEntry?.destination?.route?.let {
+                         it.startsWith("settings") || it.startsWith("library_manager")
+                        } != true
                     }
 
                     val shouldShowNavigationRail = remember(navBackStackEntry, searchActive, shouldHideNavAndPlayer) {

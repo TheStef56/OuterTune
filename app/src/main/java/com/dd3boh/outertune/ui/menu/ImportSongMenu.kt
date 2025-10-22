@@ -18,6 +18,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,6 +40,7 @@ import com.dd3boh.outertune.R
 import com.dd3boh.outertune.constants.ListThumbnailSize
 import com.dd3boh.outertune.constants.ThumbnailCornerRadius
 import com.dd3boh.outertune.db.entities.Song
+import com.dd3boh.outertune.models.MediaMetadata
 import com.dd3boh.outertune.models.toMediaMetadata
 import com.dd3boh.outertune.ui.component.button.IconButton
 import com.dd3boh.outertune.ui.component.items.ListItem
@@ -48,6 +50,10 @@ import com.dd3boh.outertune.ui.screens.Screens
 import com.dd3boh.outertune.utils.joinByBullet
 import com.dd3boh.outertune.utils.makeTimeString
 import com.dd3boh.outertune.viewmodels.ImportM3uViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 @Composable
@@ -55,6 +61,7 @@ fun ImportSongMenu(
     song: Song,
     modelIndex: Pair<ImportM3uViewModel, Int>,
     navController: NavController,
+    m3uNavController: NavController,
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -93,8 +100,11 @@ fun ImportSongMenu(
             IconButton(
                 onClick = {
                     val s = song.song.toggleLike()
-                    database.query {
-                        update(s)
+                    CoroutineScope(Dispatchers.IO).launch {
+                        database.insert(s)
+                        database.query {
+                            update(s)
+                        }
                     }
 
                     if (!s.isLocal) {
@@ -103,7 +113,8 @@ fun ImportSongMenu(
                 }
             ) {
                 Icon(
-                    painter = painterResource(if (song.song.liked) R.drawable.favorite else R.drawable.favorite_border),
+                    painter = painterResource(if (database.song(song.id).collectAsState(initial = null).value?.song?.liked
+                            ?: false) R.drawable.favorite else R.drawable.favorite_border),
                     tint = if (song.song.liked) MaterialTheme.colorScheme.error else LocalContentColor.current,
                     contentDescription = null
                 )
@@ -168,7 +179,7 @@ fun ImportSongMenu(
             title = R.string.swap_song
         ) {
             onDismiss()
-            navController.navigate(Screens.M3uSearch.route)
+            m3uNavController.navigate(Screens.M3uSearch.route)
         }
 
         GridMenuItem(
@@ -204,4 +215,37 @@ fun ImportSongMenu(
             setVisibility = { showDetailsDialog = it }
         )
     }
+}
+
+@Composable
+fun ImportSongsMenu(
+    modelUuids: Pair<ImportM3uViewModel, MutableList<String>>,
+    onDismiss: () -> Unit,
+) {
+
+    GridMenu(
+        contentPadding = PaddingValues(
+            start = 8.dp,
+            top = 8.dp,
+            end = 8.dp,
+            bottom = 8.dp + WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
+        )
+    ) {
+
+        GridMenuItem(
+            icon = Icons.Rounded.Delete,
+            title = R.string.delete_import
+        ) {
+            onDismiss()
+
+            modelUuids.second.forEach { uuid ->
+                modelUuids.first.importedSongs.remove(
+                    modelUuids.first.importedSongs.find{
+                    it.uuid == uuid
+                })
+            }
+            modelUuids.second.clear()
+        }
+    }
+
 }

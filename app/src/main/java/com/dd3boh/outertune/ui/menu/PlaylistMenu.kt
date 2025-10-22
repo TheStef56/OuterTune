@@ -439,7 +439,7 @@ fun PlaylistMenu(
             onPreAdd = { playlist ->
                 if (playlist == null) return@AddToPlaylistDialog emptyList()
                 // add songs to playlist and push to ytm
-                songs.let { playlist!!.playlist.browseId?.let { YouTube.addPlaylistToPlaylist(it, playlist!!.id) } }
+                songs.let { playlist.playlist.browseId?.let { YouTube.addPlaylistToPlaylist(it, playlist!!.id) } }
 
                 playlist!!.playlist.browseId?.let { playlistId ->
                     YouTube.addPlaylistToPlaylist(playlistId, playlist!!.id)

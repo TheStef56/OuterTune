@@ -228,8 +228,9 @@ fun SongListItem(
 fun ReorderableCollectionItemScope.M3uSongListItem(
     song: Song,
     isMissing: Boolean,
-//    isSelected: Boolean,
-//    onSelectedChange: (Boolean) -> Unit,
+    inSelectMode: Boolean?,
+    isSelected: Boolean = false,
+    onSelectedChange: (Boolean) -> Unit,
     onEditClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -274,6 +275,12 @@ fun ReorderableCollectionItemScope.M3uSongListItem(
             }
         },
         trailingContent = {
+            if (inSelectMode == true) {
+                Checkbox(
+                    checked = isSelected,
+                    onCheckedChange = onSelectedChange
+                )
+            } else {
                 IconButton(
                     onClick = onEditClick
                 ) {
@@ -291,6 +298,7 @@ fun ReorderableCollectionItemScope.M3uSongListItem(
                         contentDescription = null
                     )
                 }
+            }
         },
         isSelected = false,
         isActive = false,

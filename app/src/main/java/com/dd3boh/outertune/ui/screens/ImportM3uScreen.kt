@@ -10,7 +10,6 @@ package com.dd3boh.outertune.ui.screens
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -37,6 +36,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.LazyListState
@@ -62,8 +62,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
@@ -107,6 +109,7 @@ import androidx.navigation.compose.rememberNavController
 import com.dd3boh.outertune.LocalDatabase
 import com.dd3boh.outertune.LocalMenuState
 import com.dd3boh.outertune.LocalPlayerAwareWindowInsets
+import com.dd3boh.outertune.LocalPlayerConnection
 import com.dd3boh.outertune.LocalSnackbarHostState
 import com.dd3boh.outertune.R
 import com.dd3boh.outertune.constants.AlbumThumbnailSize
@@ -120,12 +123,17 @@ import com.dd3boh.outertune.db.entities.ArtistEntity
 import com.dd3boh.outertune.db.entities.Song
 import com.dd3boh.outertune.db.entities.SongEntity
 import com.dd3boh.outertune.extensions.move
+import com.dd3boh.outertune.extensions.togglePlayPause
+import com.dd3boh.outertune.models.MediaMetadata
 import com.dd3boh.outertune.models.toMediaMetadata
+import com.dd3boh.outertune.playback.queues.ListQueue
 import com.dd3boh.outertune.ui.component.ChipsRow
 import com.dd3boh.outertune.ui.component.EmptyPlaceholder
 import com.dd3boh.outertune.ui.component.EnumListPreference
+import com.dd3boh.outertune.ui.component.FloatingFooter
 import com.dd3boh.outertune.ui.component.LazyColumnScrollbar
 import com.dd3boh.outertune.ui.component.SearchBar
+import com.dd3boh.outertune.ui.component.SelectHeader
 import com.dd3boh.outertune.ui.component.button.IconButton
 import com.dd3boh.outertune.ui.component.items.M3uSongListItem
 import com.dd3boh.outertune.ui.component.items.M3uSongSearchListItem
@@ -133,6 +141,7 @@ import com.dd3boh.outertune.ui.component.items.YouTubeListItem
 import com.dd3boh.outertune.ui.component.shimmer.ListItemPlaceHolder
 import com.dd3boh.outertune.ui.component.shimmer.ShimmerHost
 import com.dd3boh.outertune.ui.dialog.AddToPlaylistDialog
+import com.dd3boh.outertune.ui.dialog.DefaultDialog
 import com.dd3boh.outertune.ui.menu.ImportSongMenu
 import com.dd3boh.outertune.ui.utils.backToMain
 import com.dd3boh.outertune.utils.lmScannerCoroutine
@@ -183,6 +192,7 @@ fun ImportM3uScreen(
     val database = LocalDatabase.current
     val focusRequester = remember { FocusRequester() }
     val snackbarHostState = LocalSnackbarHostState.current
+    val playerConnection = LocalPlayerConnection.current
 
     var scannerSensitivity by rememberSaveable {
         mutableStateOf(ScannerM3uMatchCriteria.LEVEL_1)
@@ -192,6 +202,9 @@ fun ImportM3uScreen(
     var remoteLookup by rememberSaveable { mutableStateOf(false) }
     var isLoading by rememberSaveable { mutableStateOf(false) }
     var showChoosePlaylistDialog by rememberSaveable {
+        mutableStateOf(false)
+    }
+    var showExitConfirm by rememberSaveable {
         mutableStateOf(false)
     }
     var importedTitle by rememberSaveable { mutableStateOf("") }
@@ -254,13 +267,12 @@ fun ImportM3uScreen(
         }
     }
 
-
     var percentage by rememberSaveable { mutableIntStateOf(0) }
 
 
     val haptic = LocalHapticFeedback.current
 
-    var importedChipsValue by remember { mutableStateOf<ImportM3uFilter>(ImportM3uFilter.ALL) }
+    var importedChipsValue by remember { mutableStateOf(ImportM3uFilter.ALL) }
 
     val importJob = remember { SupervisorJob() }
 
@@ -303,6 +315,7 @@ fun ImportM3uScreen(
         }
     }
 
+    val menuState = LocalMenuState.current
 
     val windowInsets = LocalPlayerAwareWindowInsets.current.union(WindowInsets.ime)
 
@@ -313,8 +326,10 @@ fun ImportM3uScreen(
         } else if (isSearching) {
             isSearching = false
             query = TextFieldValue()
+        } else if (inSelectMode) {
+            onExitSelectionMode()
         } else {
-            navController.navigateUp()
+            showExitConfirm = true
         }
     }
 
@@ -379,17 +394,16 @@ fun ImportM3uScreen(
             modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
         ) {
             composable(Screens.M3uList.route) {
-                if (isSearching) {
-                    BackHandler {
+                BackHandler {
+                    if (isSearching) {
                         isSearching = false
                         query = TextFieldValue()
-                    }
-                } else {
-                    BackHandler {
-                        navController.navigateUp()
+                    } else if (inSelectMode) {
+                        onExitSelectionMode()
+                    } else {
+                            showExitConfirm = true
                     }
                 }
-                val menuState = LocalMenuState.current
                 LazyColumn(
                     state = mainListState,
                     contentPadding = windowInsets.asPaddingValues()
@@ -458,10 +472,10 @@ fun ImportM3uScreen(
                             if (viewModel.importedSongs.isNotEmpty()) {
                                 ChipsRow(
                                     chips = listOf(
-                                        ImportM3uFilter.ALL to "${stringResource(R.string.filter_all)} (${viewModel.importedSongs.size})",
-                                        ImportM3uFilter.IMPORTED to "${stringResource(R.string.filter_imported)} (${viewModel.importedSongs.filter { it.status == ImportM3uFilter.IMPORTED || it.status == ImportM3uFilter.MISMATCH}.size})",
-                                        ImportM3uFilter.MISSING to "${stringResource(R.string.filter_missing)} (${viewModel.importedSongs.filter { it.status == ImportM3uFilter.MISSING }.size})",
-                                        ImportM3uFilter.MISMATCH to "${stringResource(R.string.filter_mismatch)} (${viewModel.importedSongs.filter { it.status == ImportM3uFilter.MISMATCH }.size})",
+                                        ImportM3uFilter.ALL to stringResource(R.string.filter_all_imported_songs, viewModel.importedSongs.size),
+                                        ImportM3uFilter.IMPORTED to stringResource(R.string.filter_imported, viewModel.importedSongs.filter { it.status == ImportM3uFilter.IMPORTED || it.status == ImportM3uFilter.MISMATCH}.size),
+                                        ImportM3uFilter.MISSING to stringResource(R.string.filter_missing, viewModel.importedSongs.filter { it.status == ImportM3uFilter.MISSING }.size),
+                                        ImportM3uFilter.MISMATCH to stringResource(R.string.filter_mismatch, viewModel.importedSongs.filter { it.status == ImportM3uFilter.MISMATCH }.size),
                                     ),
                                     currentValue = importedChipsValue,
                                     onValueUpdate = { importedChipsValue = it }
@@ -522,7 +536,7 @@ fun ImportM3uScreen(
                                     )
                                 }
                                 Text(
-                                    text = stringResource(R.string.import_playlist_to_get_started), // TODO: add to R.string
+                                    text = stringResource(R.string.import_playlist_to_get_started),
                                     textAlign = TextAlign.Center
                                 )
                             }
@@ -531,7 +545,7 @@ fun ImportM3uScreen(
 
                     if (viewModel.importedSongs.isNotEmpty()) {
                         val songs = viewModel.importedSongs
-                            .filter { !isSearching || queryMatchesSong(query.text, it.querySong.second) }
+                            .filter { !isSearching || queryMatchesSong(query.text, it.song) }
                             .filter {
                                 when (importedChipsValue) {
                                     ImportM3uFilter.IMPORTED -> it.status == ImportM3uFilter.IMPORTED || it.status == ImportM3uFilter.MISMATCH
@@ -542,27 +556,37 @@ fun ImportM3uScreen(
                             }
                         itemsIndexed(
                             items = songs,
-                            key = { _, (_, uuid, _) -> uuid }
-                        ) { index, (querySong, uuid, status) ->
+                            key = { _, (_, _, uuid, _) -> uuid }
+                        ) { index, (query, song, uuid, status) ->
                             ReorderableItem(
                                 state = reorderableState,
                                 key = uuid,
                             ) {
                                 M3uSongListItem(
-                                    song = querySong.second,
+                                    song = song,
                                     isMissing = status == ImportM3uFilter.MISSING,
+                                    inSelectMode = inSelectMode,
+                                    isSelected = selection.contains(uuid),
+                                    onSelectedChange = { selected ->
+                                        if (selected) {
+                                            selection.add(uuid)
+                                        } else {
+                                            selection.remove(uuid)
+                                        }
+                                    },
                                     onEditClick = {
                                         menuState.show {
                                             ImportSongMenu (
-                                                song = querySong.second,
+                                                song = song,
                                                 modelIndex = Pair(viewModel, index),
-                                                navController = m3uNavController,
+                                                navController = navController,
+                                                m3uNavController = m3uNavController,
                                                 onDismiss = menuState::dismiss
                                             )
                                         }
                                         searchId = index
                                         haptic.performHapticFeedback(HapticFeedbackType.Companion.ContextClick)
-                                        onSearchQueryChange(TextFieldValue(querySong.first))
+                                        onSearchQueryChange(TextFieldValue(query))
                                     },
                                     modifier = Modifier
                                         .background (
@@ -572,6 +596,29 @@ fun ImportM3uScreen(
                                                 else ->  MaterialTheme.colorScheme.background
                                             }
                                         )
+                                        .combinedClickable(
+                                            onClick = {
+                                                if (status == ImportM3uFilter.IMPORTED || status == ImportM3uFilter.MISMATCH) {
+                                                    if (song.id == playerConnection?.mediaMetadata?.value?.id) {
+                                                        playerConnection.player.togglePlayPause()
+                                                    } else {
+                                                        playerConnection?.playQueue(
+                                                            ListQueue(
+                                                                items = List(1) { song.toMediaMetadata() },
+                                                                startIndex = 0,
+                                                            )
+                                                        )
+                                                    }
+                                                }
+                                            },
+                                            onLongClick = {
+                                                if (!inSelectMode) {
+                                                    inSelectMode = true
+                                                    selection.add(uuid)
+                                                }
+                                            }
+                                        )
+
                                 )
                             }
                         }
@@ -655,12 +702,13 @@ fun ImportM3uScreen(
                                         M3uSongSearchListItem(
                                             song = item,
                                             onSearchResultClick = {
-                                                val prevSongQuery = viewModel.importedSongs[searchId].querySong.first
+                                                val prevSongQuery = viewModel.importedSongs[searchId].query
                                                 viewModel.importedSongs[searchId] =
                                                     ImportedSong(
-                                                        Pair(prevSongQuery, item),
-                                                        UUID.randomUUID().toString(),
-                                                        ImportM3uFilter.IMPORTED
+                                                        query = prevSongQuery,
+                                                        song = item,
+                                                        uuid = UUID.randomUUID().toString(),
+                                                        status = ImportM3uFilter.IMPORTED
                                                     )
 
                                                 m3uNavController.navigate(Screens.M3uList.route)
@@ -687,7 +735,7 @@ fun ImportM3uScreen(
                                     { item: YTItem, collection: List<YTItem> ->
                                         fun onClick() {
                                             val prevSongQuery =
-                                                viewModel.importedSongs[searchId].querySong.first
+                                                viewModel.importedSongs[searchId].query
                                             val songItem = (item as? SongItem)
                                             if (songItem == null) return
                                             val song = Song(
@@ -702,9 +750,10 @@ fun ImportM3uScreen(
                                             )
                                             viewModel.importedSongs[searchId] =
                                                 ImportedSong(
-                                                    Pair(prevSongQuery, song),
-                                                    UUID.randomUUID().toString(),
-                                                    ImportM3uFilter.IMPORTED
+                                                    query = prevSongQuery,
+                                                    song = song,
+                                                    uuid = UUID.randomUUID().toString(),
+                                                    status = ImportM3uFilter.IMPORTED
                                                 )
 
                                             m3uNavController.navigate(Screens.M3uList.route)
@@ -727,9 +776,19 @@ fun ImportM3uScreen(
                                                 },
                                                 modifier = Modifier
                                                     .combinedClickable(
-                                                        onClick = { onClick() },
+                                                        onClick = {
+                                                            if (item.id == playerConnection?.mediaMetadata?.value?.id) {
+                                                                playerConnection.player.togglePlayPause()
+                                                            } else {
+                                                                playerConnection?.playQueue(
+                                                                    ListQueue(
+                                                                        items = List(1) { (item as SongItem).toMediaMetadata() },
+                                                                        startIndex = 0,
+                                                                    )
+                                                                )
+                                                            }
+                                                        },
                                                     )
-                                                    .animateItem()
                                             )
                                         }
 
@@ -864,6 +923,27 @@ fun ImportM3uScreen(
             scrollBehavior = scrollBehavior
         )
 
+        FloatingFooter(inSelectMode) {
+            SelectHeader(
+                navController = navController,
+                selectedItems = selection.map { uuid ->
+                    viewModel.importedSongs.find { it.uuid == uuid }
+                }.map { it?.song?.toMediaMetadata() } as List<MediaMetadata>,
+                totalItemCount = viewModel.importedSongs.size,
+                onSelectAll = {
+                    selection.clear()
+                    selection.addAll(viewModel.importedSongs.map { it.uuid })
+                },
+                onDeselectAll = { selection.clear() },
+                menuState = menuState,
+                onDismiss = onExitSelectionMode,
+                importM3uList = Pair(
+                        viewModel,
+                        selection,
+                    )
+            )
+        }
+
         // TODO: in the future, this will likely be its own full page with no navbar
 //        SnackbarHost(
 //            hostState = snackbarHostState,
@@ -881,14 +961,43 @@ fun ImportM3uScreen(
             songIds = viewModel.importedSongs.filter {
                 it.status == ImportM3uFilter.IMPORTED ||
                 it.status == ImportM3uFilter.MISMATCH
-            }.map { (querySong, _, _) -> querySong.second.id },
+            }.map { (_, song, _, _) -> song.id },
             onPreAdd = {
-                viewModel.importedSongs.map { (querySong, _, _) -> querySong.second }.forEach {
+                viewModel.importedSongs.map { (_, song, _, _) -> song }.forEach {
                     database.insert(it.toMediaMetadata())
                 }
                 emptyList()
             },
             onDismiss = { showChoosePlaylistDialog = false }
+        )
+    }
+
+    if (showExitConfirm) {
+        DefaultDialog(
+            onDismiss = { showExitConfirm = false },
+            content = {
+                Text(
+                    text = stringResource(R.string.import_m3u_exit_confirm),
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(horizontal = 18.dp)
+                )
+            },
+            buttons = {
+                TextButton(
+                    onClick = { showExitConfirm = false }
+                ) {
+                    Text(text = stringResource(android.R.string.cancel))
+                }
+
+                TextButton(
+                    onClick = {
+                        navController.navigateUp()
+                        showExitConfirm = false
+                    }
+                ) {
+                    Text(text = stringResource(android.R.string.ok))
+                }
+            }
         )
     }
 }
@@ -1004,7 +1113,8 @@ suspend fun loadM3u(
                                         Pair(
                                             index,
                                             ImportedSong(
-                                                querySong = Pair(query, matches.first()),
+                                                query = query,
+                                                song = matches.first(),
                                                 uuid = UUID.randomUUID().toString(),
                                                 status = if (matches.first().title == title) ImportM3uFilter.IMPORTED else ImportM3uFilter.MISMATCH
                                             )
@@ -1022,7 +1132,8 @@ suspend fun loadM3u(
                                                 Pair(
                                                     index,
                                                     ImportedSong(
-                                                        querySong = Pair(query, s),
+                                                        query = query,
+                                                        song = s,
                                                         uuid = UUID.randomUUID().toString(),
                                                         status = if (s.title == title) ImportM3uFilter.IMPORTED else ImportM3uFilter.MISMATCH
                                                     )
@@ -1038,7 +1149,8 @@ suspend fun loadM3u(
                                         Pair(
                                             index,
                                             ImportedSong(
-                                                querySong = Pair(query, mockSong),
+                                                query = query,
+                                                song = mockSong,
                                                 uuid = UUID.randomUUID().toString(),
                                                 status = ImportM3uFilter.MISSING
                                             )
@@ -1071,7 +1183,7 @@ suspend fun loadM3u(
     }
 
     if (songs.isEmpty()) {
-        withContext(Dispatchers.Main) {
+        CoroutineScope(Dispatchers.IO).launch {
             snackbarHostState.showSnackbar(
                 message = context.getString(R.string.m3u_import_failed),
                 withDismissAction = true,

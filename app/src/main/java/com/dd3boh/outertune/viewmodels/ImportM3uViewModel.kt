@@ -83,7 +83,8 @@ class ImportM3uViewModel @Inject constructor(
 }
 
 data class ImportedSong(
-    val querySong: Pair<String, Song>,
+    val query:String,
+    val song: Song,
     val uuid: String,
     val status: ImportM3uFilter
 )
