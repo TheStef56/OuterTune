@@ -219,7 +219,8 @@ fun ImportSongMenu(
 
 @Composable
 fun ImportSongsMenu(
-    modelUuids: Pair<ImportM3uViewModel, MutableList<String>>,
+    items: MutableList<String>,
+    importM3uViewModel: ImportM3uViewModel,
     onDismiss: () -> Unit,
 ) {
 
@@ -238,13 +239,13 @@ fun ImportSongsMenu(
         ) {
             onDismiss()
 
-            modelUuids.second.forEach { uuid ->
-                modelUuids.first.importedSongs.remove(
-                    modelUuids.first.importedSongs.find{
+            items.forEach { uuid ->
+                importM3uViewModel.importedSongs.remove(
+                    importM3uViewModel.importedSongs.find{
                     it.uuid == uuid
                 })
             }
-            modelUuids.second.clear()
+            items.clear()
         }
     }
 

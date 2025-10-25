@@ -134,6 +134,7 @@ import com.dd3boh.outertune.ui.component.FloatingFooter
 import com.dd3boh.outertune.ui.component.LazyColumnScrollbar
 import com.dd3boh.outertune.ui.component.SearchBar
 import com.dd3boh.outertune.ui.component.SelectHeader
+import com.dd3boh.outertune.ui.component.SelectHeaderM3u
 import com.dd3boh.outertune.ui.component.button.IconButton
 import com.dd3boh.outertune.ui.component.items.M3uSongListItem
 import com.dd3boh.outertune.ui.component.items.M3uSongSearchListItem
@@ -596,13 +597,19 @@ fun ImportM3uScreen(
                                         )
                                         .combinedClickable(
                                             onClick = {
-                                                if (status == ImportM3uFilter.IMPORTED || status == ImportM3uFilter.MISMATCH) {
+                                                if (inSelectMode) {
+                                                    if (selection.contains(uuid)) {
+                                                        selection.remove(uuid)
+                                                    } else {
+                                                        selection.add(uuid)
+                                                    }
+                                                } else if (status == ImportM3uFilter.IMPORTED || status == ImportM3uFilter.MISMATCH) {
                                                     if (song.id == playerConnection?.mediaMetadata?.value?.id) {
                                                         playerConnection.player.togglePlayPause()
                                                     } else {
                                                         playerConnection?.playQueue(
                                                             ListQueue(
-                                                                items = List(1) { song.toMediaMetadata() },
+                                                                items = listOf(song.toMediaMetadata()),
                                                                 startIndex = 0,
                                                             )
                                                         )
@@ -775,15 +782,17 @@ fun ImportM3uScreen(
                                                 modifier = Modifier
                                                     .combinedClickable(
                                                         onClick = {
-                                                            if (item.id == playerConnection?.mediaMetadata?.value?.id) {
-                                                                playerConnection.player.togglePlayPause()
-                                                            } else {
-                                                                playerConnection?.playQueue(
-                                                                    ListQueue(
-                                                                        items = List(1) { (item as SongItem).toMediaMetadata() },
-                                                                        startIndex = 0,
+                                                            if (item is SongItem){
+                                                                if (item.id == playerConnection?.mediaMetadata?.value?.id) {
+                                                                    playerConnection.player.togglePlayPause()
+                                                                } else {
+                                                                    playerConnection?.playQueue(
+                                                                        ListQueue(
+                                                                            items = listOf(item.toMediaMetadata()),
+                                                                            startIndex = 0,
+                                                                        )
                                                                     )
-                                                                )
+                                                                }
                                                             }
                                                         },
                                                     )
@@ -922,23 +931,26 @@ fun ImportM3uScreen(
         )
 
         FloatingFooter(inSelectMode) {
-            SelectHeader(
-                navController = navController,
-                selectedItems = selection.map { uuid ->
-                    viewModel.importedSongs.find { it.uuid == uuid }
-                }.map { it?.song?.toMediaMetadata() } as List<MediaMetadata>,
+            SelectHeaderM3u(
+                selectedItems = selection,
                 totalItemCount = viewModel.importedSongs.size,
                 onSelectAll = {
-                    selection.clear()
-                    selection.addAll(viewModel.importedSongs.map { it.uuid })
+                    selection.addAll(
+                        elements = viewModel.importedSongs.filter {
+                            when (importedChipsValue) {
+                                ImportM3uFilter.IMPORTED -> it.status == ImportM3uFilter.IMPORTED || it.status == ImportM3uFilter.MISMATCH
+                                ImportM3uFilter.MISSING -> it.status == ImportM3uFilter.MISSING
+                                ImportM3uFilter.MISMATCH -> it.status == ImportM3uFilter.MISMATCH
+                                else -> true
+                            }
+                        }.map { it.uuid }
+                        .filter { !selection.contains(it)}
+                    )
                 },
                 onDeselectAll = { selection.clear() },
                 menuState = menuState,
                 onDismiss = onExitSelectionMode,
-                importM3uList = Pair(
-                        viewModel,
-                        selection,
-                    )
+                importM3uViewModel = viewModel
             )
         }
 

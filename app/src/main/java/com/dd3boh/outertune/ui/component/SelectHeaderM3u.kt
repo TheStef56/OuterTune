@@ -20,6 +20,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -28,19 +29,21 @@ import androidx.navigation.NavController
 import com.dd3boh.outertune.R
 import com.dd3boh.outertune.models.MediaMetadata
 import com.dd3boh.outertune.ui.component.button.IconButton
+import com.dd3boh.outertune.ui.menu.ImportSongMenu
+import com.dd3boh.outertune.ui.menu.ImportSongsMenu
 import com.dd3boh.outertune.ui.menu.MenuState
 import com.dd3boh.outertune.ui.menu.SelectionMediaMetadataMenu
+import com.dd3boh.outertune.viewmodels.ImportM3uViewModel
 
 @Composable
-fun RowScope.SelectHeader(
-    navController: NavController,
-    selectedItems: List<MediaMetadata>,
+fun RowScope.SelectHeaderM3u(
+    selectedItems: MutableList<String>,
     totalItemCount: Int,
     onSelectAll: () -> Unit,
     onDeselectAll: () -> Unit,
     menuState: MenuState,
     onDismiss: () -> Unit = {},
-    onRemoveFromHistory: (() -> Unit)? = null
+    importM3uViewModel:  ImportM3uViewModel
 ) {
     val context = LocalContext.current
 
@@ -55,16 +58,18 @@ fun RowScope.SelectHeader(
                 .weight(1f, false)
         )
 
+        LaunchedEffect(totalItemCount) {
+            if (totalItemCount == 0) onDismiss()
+        }
+
         // option menu
         IconButton(
             onClick = {
                 menuState.show {
-                    SelectionMediaMetadataMenu(
-                        navController = navController,
-                        selection = selectedItems,
-                        onDismiss = menuState::dismiss,
-                        clearAction = onDeselectAll,
-                        onRemoveFromHistory = onRemoveFromHistory
+                    ImportSongsMenu(
+                        items = selectedItems,
+                        importM3uViewModel = importM3uViewModel,
+                        onDismiss = menuState::dismiss
                     )
                 }
             }
