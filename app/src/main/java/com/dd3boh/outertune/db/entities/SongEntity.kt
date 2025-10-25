@@ -60,9 +60,11 @@ data class SongEntity(
         likedDate = if (!liked) LocalDateTime.now() else null,
         inLibrary = if (!liked) inLibrary ?: LocalDateTime.now() else inLibrary
     ).also {
-        CoroutineScope(syncCoroutine).launch {
-            YouTube.likeVideo(id, !liked)
-            this.cancel()
+        if (!isLocal) {
+            CoroutineScope(syncCoroutine).launch {
+                YouTube.likeVideo(id, !liked)
+                this.cancel()
+            }
         }
     }
 

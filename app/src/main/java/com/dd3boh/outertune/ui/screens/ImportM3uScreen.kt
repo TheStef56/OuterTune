@@ -191,8 +191,10 @@ fun ImportM3uScreen(
     val context = LocalContext.current
     val database = LocalDatabase.current
     val focusRequester = remember { FocusRequester() }
-    val snackbarHostState = LocalSnackbarHostState.current
+    val menuState = LocalMenuState.current
     val playerConnection = LocalPlayerConnection.current
+    val snackbarHostState = LocalSnackbarHostState.current
+    val windowInsets = LocalPlayerAwareWindowInsets.current.union(WindowInsets.ime)
 
     var scannerSensitivity by rememberSaveable {
         mutableStateOf(ScannerM3uMatchCriteria.LEVEL_1)
@@ -314,10 +316,6 @@ fun ImportM3uScreen(
             }
         }
     }
-
-    val menuState = LocalMenuState.current
-
-    val windowInsets = LocalPlayerAwareWindowInsets.current.union(WindowInsets.ime)
 
     fun handleBack() {
         if (navBackStackEntry?.destination?.route?.let { (it == Screens.M3uSearch.route) } == true) {
