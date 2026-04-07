@@ -10,6 +10,7 @@
 package com.dd3boh.outertune.playback
 
 import android.util.Log
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
@@ -87,6 +88,8 @@ class PlayerConnection(
 
     val error = MutableStateFlow<PlaybackException?>(null)
 
+    var ignoreTransitions = 0
+
     init {
         player.addListener(this)
 
@@ -161,22 +164,21 @@ class PlayerConnection(
         service.toggleLibrary()
     }
 
-    fun playNextPrioritySong() {
+    private fun playNextPrioritySong() {
         val currentQueue = service.queueBoard.value.getCurrentQueue()
         if (currentQueue != null && currentQueue.priorityQueue.isNotEmpty()) {
             val next = currentQueue.priorityQueue.removeAt(0)
+
             player.seekToPreviousMediaItem()
             player.addMediaItem(player.currentMediaItemIndex + 1, next.toMediaItem())
             player.seekToNextMediaItem()
+            ignoreTransitions = 2
         }
     }
 
     override fun onPlaybackStateChanged(state: Int) {
         playbackState.value = state
         error.value = player.playerError
-        if (state == STATE_ENDED) {
-            playNextPrioritySong()
-        }
     }
 
     override fun onPlayWhenReadyChanged(newPlayWhenReady: Boolean, reason: Int) {
@@ -184,11 +186,16 @@ class PlayerConnection(
     }
 
     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+        Log.d("REASON:", reason.toString())
         mediaMetadata.value = mediaItem?.metadata
         currentMediaItemIndex.value = player.currentMediaItemIndex
         currentWindowIndex.value = player.getCurrentQueueIndex()
         updateCanSkipPreviousAndNext()
-        playNextPrioritySong()
+        if (ignoreTransitions <= 0) {
+            playNextPrioritySong()
+        } else {
+            ignoreTransitions -= 1
+        }
     }
 
     override fun onTimelineChanged(timeline: Timeline, reason: Int) {
