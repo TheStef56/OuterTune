@@ -19,6 +19,7 @@ import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.SelectAll
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -30,7 +31,6 @@ sealed class Screens(
     val icon: ImageVector,
     val route: String,
 ) {
-    // Main screens
     data object Home : Screens(R.string.home, Icons.Rounded.Home, "home")
     data object Songs : Screens(R.string.songs, Icons.Rounded.MusicNote, "songs")
     data object Folders : Screens(R.string.folders, Icons.Rounded.Folder, "folders")
@@ -38,6 +38,7 @@ sealed class Screens(
     data object Albums : Screens(R.string.albums, Icons.Rounded.Album, "albums")
     data object Playlists : Screens(R.string.playlists, Icons.AutoMirrored.Rounded.QueueMusic, "playlists")
     data object Library : Screens(R.string.library, Icons.Rounded.LibraryMusic, "library")
+    data object Player : Screens(R.string.player, Icons.Rounded.PlayCircle, "player")
 
     // Library manager screens
     data object M3uList : Screens(R.string.albums, Icons.Rounded.SelectAll, "m3u_list")
@@ -61,9 +62,9 @@ sealed class Screens(
          * B: Albums
          * L: Playlists
          * M: Library
+         * P: Player
          *
          * Not/won't implement
-         * P: Player
          * Q: Queue
          * E: Search
          */
@@ -74,7 +75,8 @@ sealed class Screens(
             Artists to 'A',
             Albums to 'B',
             Playlists to 'L',
-            Library to 'M'
+            Library to 'M',
+//            Player to 'P',
         )
 
         fun getAllScreens() = screenPairs.map { it.first }

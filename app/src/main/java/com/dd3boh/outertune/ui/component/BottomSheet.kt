@@ -9,6 +9,7 @@
 
 package com.dd3boh.outertune.ui.component
 
+import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationSpec
@@ -38,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -45,6 +47,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.input.pointer.util.addPointerInputChange
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -52,6 +55,8 @@ import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import com.dd3boh.outertune.constants.BottomSheetAnimationSpec
 import com.dd3boh.outertune.constants.BottomSheetSoftAnimationSpec
+import com.dd3boh.outertune.constants.MinMiniPlayerHeight
+import com.dd3boh.outertune.constants.MiniPlayerHeight
 import com.dd3boh.outertune.constants.NavigationBarAnimationSpec
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -71,6 +76,8 @@ fun BottomSheet(
     collapsedBackgroundColor: Color = Color.Transparent,
     content: @Composable BoxScope.() -> Unit,
 ) {
+    val density = LocalDensity.current
+
     Box(
         modifier = modifier
             .graphicsLayer {
@@ -119,18 +126,27 @@ fun BottomSheet(
             BackHandler(onBack = state::collapseSoft)
         }
 
+        // main
         if (!state.isCollapsed) {
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer {
-                        alpha = ((state.progress * 4 - 0.25f) * 4).coerceIn(0f, 1f)
+                        alpha = ((state.progress - 0.15f) * 4).coerceIn(0f, 1f)
                     },
                 content = content
             )
         }
 
-        if (!state.isExpanded && (onDismiss == null || !state.isDismissed)) {
+        // collapsed content
+        if (!state.isExpanded) {
+            // startY must be < state.collapsedBound
+            val startY = with(density) { (MiniPlayerHeight + MinMiniPlayerHeight - 1.dp).toPx() }
+            val colors = mutableListOf(collapsedBackgroundColor, Color.Transparent)
+            // no visible gradient if no bottom content to hide it
+            if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE || MiniPlayerHeight + MinMiniPlayerHeight >= state.collapsedBound) {
+                colors[1] = collapsedBackgroundColor
+            }
             Box(
                 modifier = Modifier
                     .graphicsLayer {
@@ -141,7 +157,12 @@ fun BottomSheet(
                     )
                     .fillMaxWidth()
                     .height(state.collapsedBound)
-                    .background(collapsedBackgroundColor),
+                    .background(
+                        Brush.verticalGradient(
+                            colors = colors,
+                            startY = startY,
+                        )
+                    ),
                 content = collapsedContent
             )
         }
@@ -169,7 +190,7 @@ class BottomSheetState(
     }
 
     val isCollapsed by derivedStateOf {
-        value == collapsedBound
+        value <= collapsedBound
     }
 
     val isExpanded by derivedStateOf {

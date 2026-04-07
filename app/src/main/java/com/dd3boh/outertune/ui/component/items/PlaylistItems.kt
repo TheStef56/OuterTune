@@ -9,7 +9,6 @@ package com.dd3boh.outertune.ui.component.items
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -35,15 +34,21 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import com.dd3boh.outertune.R
 import com.dd3boh.outertune.constants.ListThumbnailSize
 import com.dd3boh.outertune.constants.ThumbnailCornerRadius
 import com.dd3boh.outertune.db.entities.Playlist
 import com.dd3boh.outertune.db.entities.PlaylistEntity
+import com.dd3boh.outertune.ui.component.items.Icon.PlaylistIcon
 import com.dd3boh.outertune.ui.utils.getNSongsString
+import com.dd3boh.outertune.utils.getThumbnailModel
+import kotlin.math.roundToInt
 
 @Composable
 fun AutoPlaylistListItem(
@@ -123,6 +128,7 @@ fun PlaylistListItem(
         else
             getNSongsString(playlist.songCount, playlist.downloadCount),
     badges = {
+        PlaylistIcon(playlist.playlist) // always show
         if (!showBadges) return@ListItem
         Icon(
             imageVector = if (playlist.playlist.isEditable) Icons.Rounded.Edit else Icons.Rounded.EditOff,
@@ -155,6 +161,7 @@ fun PlaylistListItem(
     thumbnailContent = {
         PlaylistThumbnail(
             playlist = playlist.playlist,
+            thumbnails = playlist.thumbnails,
         )
     },
     trailingContent = trailingContent,
@@ -174,6 +181,7 @@ fun PlaylistGridItem(
         else
             getNSongsString(playlist.songCount, playlist.downloadCount),
     badges = {
+        PlaylistIcon(playlist.playlist)
         if (playlist.downloadCount > 0) {
             Icon(
                 imageVector = Icons.Rounded.OfflinePin,
@@ -188,6 +196,7 @@ fun PlaylistGridItem(
         val width = maxWidth
         PlaylistThumbnail(
             playlist = playlist.playlist,
+            thumbnails = playlist.thumbnails,
             size = width,
             iconPadding = width / 6,
             iconTint = LocalContentColor.current.copy(alpha = 0.8f),
@@ -200,37 +209,48 @@ fun PlaylistGridItem(
 @Composable
 fun PlaylistThumbnail(
     playlist: PlaylistEntity,
+    thumbnails: List<String>,
     size: Dp = ListThumbnailSize,
     shape: Shape = RoundedCornerShape(ThumbnailCornerRadius),
     iconPadding: Dp = 4.dp,
     iconTint: Color = LocalContentColor.current,
-    customIcon: (@Composable BoxScope.() -> Unit)? = null,
 ) {
-    /**
-     * 8: Local playlist
-     * 4: Synced/editable playlist
-     * 2: Saved remote playlist
-     * 1: Supports endpoints
-     *
-     */
-    var features = 0
-    if (playlist.isLocal) features += 8
-    if (playlist.isEditable) features += 4
-    if (playlist.bookmarkedAt != null) features += 2
-    if ((playlist.playEndpointParams ?: playlist.radioEndpointParams
-        ?: playlist.shuffleEndpointParams) != null
-    ) features += 1
-
     Box(
         modifier = Modifier
             .size(size)
             .clip(shape)
             .background(MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp))
     ) {
-        if (customIcon == null) {
+        val thumbnail = playlist.thumbnailUrl ?: thumbnails.firstOrNull()
+        if (thumbnail != null) {
+            val density = LocalDensity.current
+            val px = (size.value * density.density).roundToInt()
+            AsyncImage(
+                model = getThumbnailModel(thumbnail, px, px),
+                contentDescription = null,
+                contentScale = ContentScale.Companion.Crop,
+                modifier = Modifier.Companion
+                    .size(size)
+                    .clip(shape)
+            )
+        } else {
+            /**
+             * 8: Local playlist
+             * 4: Synced/editable playlist
+             * 2: Saved remote playlist
+             * 1: Supports endpoints
+             *
+             */
+            var features = 0
+            if (playlist.isLocal) features += 8
+            if (playlist.isEditable) features += 4
+            if (playlist.bookmarkedAt != null) features += 2
+            if ((playlist.playEndpointParams ?: playlist.radioEndpointParams
+                ?: playlist.shuffleEndpointParams) != null
+            ) features += 1
             Icon(
                 imageVector = when {
-                    // TODO: Icons that actually godammn match with each other wth is this google???
+                    // TODO: Icons that actually goddamn match with each other wth is this google???
                     features >= 8 -> Icons.AutoMirrored.Rounded.QueueMusic
                     features >= 4 -> Icons.AutoMirrored.Rounded.PlaylistAdd
                     features >= 2 -> Icons.AutoMirrored.Rounded.PlaylistPlay
@@ -242,8 +262,6 @@ fun PlaylistThumbnail(
                     .fillMaxSize()
                     .padding(iconPadding)
             )
-        } else {
-            customIcon()
         }
     }
 }

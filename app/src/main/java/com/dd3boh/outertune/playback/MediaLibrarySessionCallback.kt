@@ -367,7 +367,7 @@ class MediaLibrarySessionCallback @Inject constructor(
         }
 
         val queueTitle = context.getString(R.string.android_auto)
-        service.queueBoard.addQueue(
+        service.queueBoard.value.addQueue(
             queueTitle,
             queue.first.map { it.metadata },
             shuffled = false,
@@ -465,7 +465,7 @@ class MediaLibrarySessionCallback @Inject constructor(
                     .setTitle(song.title)
                     .setSubtitle(artists.joinToString { it.name })
                     .setArtist(artists.joinToString { it.name })
-                    .setArtworkUri(if (song.isLocal) song.localPath?.toUri() else song.thumbnailUrl?.toUri())
+                    .setArtworkUri(song.thumbnailUrl?.toUri())
                     .setIsPlayable(isPlayable)
                     .setIsBrowsable(isBrowsable)
                     .setMediaType(MEDIA_TYPE_MUSIC)
@@ -483,7 +483,7 @@ class MediaLibrarySessionCallback @Inject constructor(
                 .setTitle(title)
                 .setSubtitle(artists.joinToString { it.name })
                 .setArtist(artists.joinToString { it.name })
-                .setArtworkUri(if (isLocal) localPath?.toUri() else thumbnailUrl?.toUri())
+                .setArtworkUri(thumbnailUrl?.toUri())
                 .setAlbumTitle(album?.title)
                 .setIsPlayable(isPlayable)
                 .setIsBrowsable(isBrowsable)

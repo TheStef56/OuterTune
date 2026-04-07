@@ -48,7 +48,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.currentBackStackEntryAsState
 import com.dd3boh.outertune.LocalMenuState
 import com.dd3boh.outertune.LocalPlayerAwareWindowInsets
 import com.dd3boh.outertune.LocalPlayerConnection
@@ -72,6 +71,7 @@ import com.dd3boh.outertune.ui.component.LazyColumnScrollbar
 import com.dd3boh.outertune.ui.component.LazyVerticalGridScrollbar
 import com.dd3boh.outertune.ui.component.LibraryAlbumGridItem
 import com.dd3boh.outertune.ui.component.LibraryAlbumListItem
+import com.dd3boh.outertune.ui.component.ScrollToTopManager
 import com.dd3boh.outertune.ui.component.SortHeader
 import com.dd3boh.outertune.ui.component.button.IconButton
 import com.dd3boh.outertune.ui.menu.ActionDropdown
@@ -111,20 +111,8 @@ fun LibraryAlbumsScreen(
 
     val lazyListState = rememberLazyListState()
     val lazyGridState = rememberLazyGridState()
-    val backStackEntry by navController.currentBackStackEntryAsState()
-    val scrollToTop = backStackEntry?.savedStateHandle?.getStateFlow("scrollToTop", false)?.collectAsState()
 
     LaunchedEffect(Unit) { viewModel.syncAlbums() }
-
-    LaunchedEffect(scrollToTop?.value) {
-        if (scrollToTop?.value == true) {
-            when (viewType) {
-                LibraryViewType.LIST -> lazyListState.animateScrollToItem(0)
-                LibraryViewType.GRID -> lazyGridState.animateScrollToItem(0)
-            }
-            backStackEntry?.savedStateHandle?.set("scrollToTop", false)
-        }
-    }
 
     val filterContent = @Composable {
         var showStoragePerm by remember {
@@ -260,6 +248,7 @@ fun LibraryAlbumsScreen(
                 }
             ),
     ) {
+        ScrollToTopManager(navController, lazyListState)
         when (viewType) {
             LibraryViewType.LIST -> {
                 LazyColumn(
