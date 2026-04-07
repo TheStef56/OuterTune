@@ -46,22 +46,24 @@ import kotlin.math.min
  */
 class QueueBoard(
     private val player: MusicService,
+    val masterQueues: SnapshotStateList<MultiQueueObject> = mutableStateListOf(),
     queues: MutableList<MultiQueueObject> = ArrayList(),
     private var maxQueues: Int
 ) {
     private val TAG = QueueBoard::class.simpleName.toString()
 
-    val masterQueues: SnapshotStateList<MultiQueueObject> = mutableStateListOf()
-    private var masterIndex = masterQueues.size - 1 // current queue index
+    private var masterIndex: Int // current queue index
     var detachedHead = false
 
     init {
+        masterQueues.clear()
         if (maxQueues < 0) {
             maxQueues = 1
         }
         if (!queues.isEmpty()) {
-            masterQueues.addAll(queues.subList(0, min(queues.size, maxQueues)))
+            masterQueues.addAll(queues.subList((queues.size - maxQueues).coerceAtLeast(0), queues.size))
         }
+        masterIndex = masterQueues.size - 1
     }
 
     /**
@@ -131,7 +133,8 @@ class QueueBoard(
      * @param replace Replace all items in the queue. This overrides forceInsert, delta
      * @param delta Takes not effect if forceInsert is false. Setting this to true will add only new
      *      songs, false will add all songs
-     * @param isRadio Specify if this is a queue that supports continuation
+     * @param continuationEndpoint An endpoint and continuation separated with \n if this is a queue that supports
+     *      continuation, else null
      * @param startIndex Index/position to instantiate the new queue with. This value takes no effect
      * if the queue already exists
      *
@@ -145,7 +148,7 @@ class QueueBoard(
         forceInsert: Boolean = false,
         replace: Boolean = false,
         delta: Boolean = true,
-        isRadio: Boolean = false,
+        continuationEndpoint: String? = null,
         startIndex: Int = 0
     ): MultiQueueObject? {
         if (QUEUE_DEBUG)
@@ -172,11 +175,12 @@ class QueueBoard(
 
                 match.replaceAll(mediaList.filterNotNull())
                 match.queuePos = startIndex
-
                 if (shuffled) {
                     shuffle(match, false, true)
                     match.queuePos = match.queue.indexOf(match.queue.find { it.shuffleIndex == 0 })
                 }
+
+                match.playlistId = continuationEndpoint
 
                 saveQueueSongs(match)
                 return match
@@ -198,6 +202,8 @@ class QueueBoard(
                     shuffle(match, false, true)
                     match.queuePos = match.queue.indexOf(match.queue.find { it.shuffleIndex == 0 })
                 }
+
+                match.playlistId = continuationEndpoint
 
                 saveQueue(match)
                 return match
@@ -222,6 +228,8 @@ class QueueBoard(
                     match.queuePos = match.queue.indexOf(match.queue.find { it.shuffleIndex == 0 })
                 }
 
+                match.playlistId = continuationEndpoint
+
                 saveQueueSongs(match)
                 return match
             } else if (match.title.endsWith("+\u200B") || anyExts != null) { // this queue is an already an extension queue
@@ -232,15 +240,19 @@ class QueueBoard(
                     addSongsToQueue(anyExts, Int.MAX_VALUE, mediaList.filterNotNull(), saveToDb = false)
                     if (shuffled) {
                         shuffle(anyExts, false, true)
-                        match.queuePos = match.queue.indexOf(match.queue.find { it.shuffleIndex == 0 })
+                        anyExts.queuePos = anyExts.queue.indexOf(anyExts.queue.find { it.shuffleIndex == 0 })
+                        anyExts.playlistId = continuationEndpoint
                     }
                 } else {
                     addSongsToQueue(match, Int.MAX_VALUE, mediaList.filterNotNull(), saveToDb = false)
                     if (shuffled) {
                         shuffle(match, false, true)
                         match.queuePos = match.queue.indexOf(match.queue.find { it.shuffleIndex == 0 })
+                        match.playlistId = continuationEndpoint
                     }
                 }
+
+                match.playlistId = continuationEndpoint
 
                 // rewrite queue
                 saveQueueSongs(anyExts ?: match)
@@ -257,6 +269,7 @@ class QueueBoard(
                 }
 
                 match.title = "${match.title} +\u200B"
+                match.playlistId = continuationEndpoint
 
                 // rewrite queue
                 saveQueueSongs(match)
@@ -266,7 +279,7 @@ class QueueBoard(
         } else {
             // add entirely new queue
             // Precondition(s): radio queues never include local songs
-            if (masterQueues.size > maxQueues) {
+            if (masterQueues.size >= maxQueues) {
                 deleteQueue(masterQueues.first())
             }
             val q = ArrayList(mediaList.filterNotNull())
@@ -282,7 +295,7 @@ class QueueBoard(
                 startIndex,
                 -1,
                 masterQueues.size,
-                if (isRadio) q.lastOrNull()?.id else null
+                continuationEndpoint
             )
             masterQueues.add(newQueue)
             if (shuffled) {
@@ -299,9 +312,9 @@ class QueueBoard(
     /**
      * Add songs to end of CURRENT QUEUE & update it in the player
      */
-    fun enqueueEnd(mediaList: List<MediaMetadata>, isRadio: Boolean = false) {
+    fun enqueueEnd(mediaList: List<MediaMetadata>) {
         getCurrentQueue()?.let {
-            addSongsToQueue(it, Int.MAX_VALUE, mediaList, isRadio = isRadio)
+            addSongsToQueue(it, Int.MAX_VALUE, mediaList)
         }
     }
 
@@ -313,7 +326,6 @@ class QueueBoard(
         pos: Int,
         mediaList: List<MediaMetadata>,
         saveToDb: Boolean = true,
-        isRadio: Boolean = false
     ) {
         val listPos = if (pos < 0) {
             0
@@ -356,9 +368,6 @@ class QueueBoard(
         }
 
         setCurrQueue(q, false)
-        if (isRadio) {
-            q.playlistId = mediaList.lastOrNull()?.id
-        }
 
         if (saveToDb) {
             saveQueueSongs(q)

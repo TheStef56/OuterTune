@@ -50,6 +50,7 @@ class PlayerConnection(
     val TAG = PlayerConnection::class.simpleName.toString()
 
     val service = binder.getService()!!
+    val queueBoard = service.queueBoard
     val player = service.player
     val scope = binder.viewModelScope
 
@@ -161,7 +162,7 @@ class PlayerConnection(
     }
 
     fun playNextPrioritySong() {
-        val currentQueue = service.queueBoard.getCurrentQueue()
+        val currentQueue = service.queueBoard.value.getCurrentQueue()
         if (currentQueue != null && currentQueue.priorityQueue.isNotEmpty()) {
             val next = currentQueue.priorityQueue.removeAt(0)
             player.seekToPreviousMediaItem()

@@ -112,6 +112,7 @@ import com.dd3boh.outertune.constants.LibraryFilterKey
 import com.dd3boh.outertune.constants.LocalLibraryEnableKey
 import com.dd3boh.outertune.constants.LyricTrimKey
 import com.dd3boh.outertune.constants.MaxSongCacheSizeKey
+import com.dd3boh.outertune.constants.NavigationBarHeight
 import com.dd3boh.outertune.constants.OOBE_VERSION
 import com.dd3boh.outertune.constants.OobeStatusKey
 import com.dd3boh.outertune.constants.ScanPathsKey
@@ -218,7 +219,7 @@ fun SetupWizard(
             }
 
             LinearProgressIndicator(
-                progress = { oobeStatus.toFloat() / OOBE_VERSION },
+                progress = { oobeStatus.toFloat() / (OOBE_VERSION - 1) },
 //                color = ProgressIndicatorDefaults.linearColor,
 //                trackColor = MaterialTheme.colorScheme.primary,
                 strokeCap = StrokeCap.Butt,
@@ -259,7 +260,7 @@ fun SetupWizard(
 
     Scaffold(
         bottomBar = {
-            if (oobeStatus > 0 && oobeStatus < OOBE_VERSION) {
+            if (oobeStatus > 0 && oobeStatus < OOBE_VERSION - 1) {
                 Box(
                     Modifier
                         .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Bottom))
@@ -427,7 +428,7 @@ fun SetupWizard(
                         ElevatedCard(
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                          ThemeAppFrag()
+                            ThemeAppFrag()
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -699,7 +700,9 @@ fun SetupWizard(
                                     // download path cannot a scan path, or a subdir of a scan path
                                     tempFilePath.toString().length <= it.toString().length && tempFilePath.toString()
                                         .contains(it.toString())
-                                }
+                                },
+                                modifier = Modifier
+                                    .verticalScroll(rememberScrollState()),
                             ) {
 
                                 val dirPickerLauncher = rememberLauncherForActivityResult(
@@ -829,9 +832,10 @@ fun SetupWizard(
                         }
                     }
                 }
+                Spacer(Modifier.height(NavigationBarHeight))
             }
 
-            if (oobeStatus == 0 || oobeStatus == OOBE_VERSION) {
+            if (oobeStatus == 0 || oobeStatus == OOBE_VERSION - 1) {
                 FloatingActionButton(
                     modifier = Modifier
                         .padding(16.dp)
