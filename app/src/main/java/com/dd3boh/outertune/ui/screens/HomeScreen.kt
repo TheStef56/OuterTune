@@ -59,7 +59,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.currentBackStackEntryAsState
 import coil3.compose.AsyncImage
 import com.dd3boh.outertune.LocalDatabase
 import com.dd3boh.outertune.LocalMenuState
@@ -67,7 +66,6 @@ import com.dd3boh.outertune.LocalPlayerAwareWindowInsets
 import com.dd3boh.outertune.LocalPlayerConnection
 import com.dd3boh.outertune.R
 import com.dd3boh.outertune.constants.GridThumbnailHeight
-import com.dd3boh.outertune.constants.InnerTubeCookieKey
 import com.dd3boh.outertune.constants.ListItemHeight
 import com.dd3boh.outertune.constants.ListThumbnailSize
 import com.dd3boh.outertune.constants.LocalLibraryEnableKey
@@ -76,9 +74,6 @@ import com.dd3boh.outertune.db.entities.Album
 import com.dd3boh.outertune.db.entities.Artist
 import com.dd3boh.outertune.db.entities.LocalItem
 import com.dd3boh.outertune.db.entities.Playlist
-import com.dd3boh.outertune.db.entities.RecentActivityType.ALBUM
-import com.dd3boh.outertune.db.entities.RecentActivityType.ARTIST
-import com.dd3boh.outertune.db.entities.RecentActivityType.PLAYLIST
 import com.dd3boh.outertune.db.entities.Song
 import com.dd3boh.outertune.extensions.togglePlayPause
 import com.dd3boh.outertune.models.toMediaMetadata
@@ -90,11 +85,11 @@ import com.dd3boh.outertune.ui.component.HideOnScrollFAB
 import com.dd3boh.outertune.ui.component.LazyColumnScrollbar
 import com.dd3boh.outertune.ui.component.NavigationTile
 import com.dd3boh.outertune.ui.component.NavigationTitle
+import com.dd3boh.outertune.ui.component.ScrollToTopManager
 import com.dd3boh.outertune.ui.component.items.AlbumGridItem
 import com.dd3boh.outertune.ui.component.items.ArtistGridItem
 import com.dd3boh.outertune.ui.component.items.SongGridItem
 import com.dd3boh.outertune.ui.component.items.SongListItem
-import com.dd3boh.outertune.ui.component.items.YouTubeCardItem
 import com.dd3boh.outertune.ui.component.items.YouTubeGridItem
 import com.dd3boh.outertune.ui.component.shimmer.GridItemPlaceHolder
 import com.dd3boh.outertune.ui.component.shimmer.ShimmerHost
@@ -115,11 +110,11 @@ import com.zionhuang.innertube.models.PlaylistItem
 import com.zionhuang.innertube.models.SongItem
 import com.zionhuang.innertube.models.WatchEndpoint
 import com.zionhuang.innertube.models.YTItem
-import com.zionhuang.innertube.utils.parseCookieString
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.math.min
+import kotlin.math.roundToInt
 import kotlin.random.Random
 
 @SuppressLint("UnusedBoxWithConstraintsScope")
@@ -131,12 +126,12 @@ fun HomeScreen(
 ) {
     val menuState = LocalMenuState.current
     val database = LocalDatabase.current
+    val density = LocalDensity.current
     val playerConnection = LocalPlayerConnection.current ?: return
     val haptic = LocalHapticFeedback.current
 
     val isPlaying by playerConnection.isPlaying.collectAsState()
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
-    val queuePlaylistId by playerConnection.queuePlaylistId.collectAsState()
 
     val quickPicks by viewModel.quickPicks.collectAsState()
     val forgottenFavorites by viewModel.forgottenFavorites.collectAsState()
@@ -145,8 +140,6 @@ fun HomeScreen(
     val accountPlaylists by viewModel.accountPlaylists.collectAsState()
     val homePage by viewModel.homePage.collectAsState()
     val explorePage by viewModel.explorePage.collectAsState()
-    val playlists by viewModel.playlists.collectAsState()
-    val recentActivity by viewModel.recentActivity.collectAsState()
 
     val selectedChip by viewModel.selectedChip.collectAsState()
 
@@ -159,25 +152,11 @@ fun HomeScreen(
 
     val quickPicksLazyGridState = rememberLazyGridState()
     val forgottenFavoritesLazyGridState = rememberLazyGridState()
-    val recentActivityGridState = rememberLazyGridState()
 
     val localLibEnable by rememberPreference(LocalLibraryEnableKey, defaultValue = true)
-    val innerTubeCookie by rememberPreference(InnerTubeCookieKey, "")
-    val isLoggedIn = remember(innerTubeCookie) {
-        "SAPISID" in parseCookieString(innerTubeCookie)
-    }
 
     val scope = rememberCoroutineScope()
     val lazylistState = rememberLazyListState()
-    val backStackEntry by navController.currentBackStackEntryAsState()
-    val scrollToTop = backStackEntry?.savedStateHandle?.getStateFlow("scrollToTop", false)?.collectAsState()
-
-    LaunchedEffect(scrollToTop?.value) {
-        if (scrollToTop?.value == true) {
-            lazylistState.animateScrollToItem(0)
-            backStackEntry?.savedStateHandle?.set("scrollToTop", false)
-        }
-    }
 
     LaunchedEffect(Unit) {
         snapshotFlow { lazylistState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
@@ -366,6 +345,8 @@ fun HomeScreen(
             ),
         contentAlignment = Alignment.TopStart
     ) {
+        val listThumbnailSize = (ListThumbnailSize.value * density.density).roundToInt()
+
         val horizontalLazyGridItemWidthFactor = if (maxWidth * 0.475f >= 320.dp) 0.475f else 0.9f
         val horizontalLazyGridItemWidth = maxWidth * horizontalLazyGridItemWidthFactor
         val quickPicksSnapLayoutInfoProvider = remember(quickPicksLazyGridState) {
@@ -385,6 +366,7 @@ fun HomeScreen(
             )
         }
 
+        ScrollToTopManager(navController, lazylistState)
         LazyColumn(
             state = lazylistState,
             contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues()
@@ -444,61 +426,6 @@ fun HomeScreen(
             }
 
 
-            if (isLoggedIn && !recentActivity.isNullOrEmpty()) {
-                item {
-                    NavigationTitle(
-                        title = stringResource(R.string.recent_activity)
-                    )
-                }
-                item {
-                    LazyHorizontalGrid(
-                        state = recentActivityGridState,
-                        rows = GridCells.Fixed(4),
-                        flingBehavior = rememberSnapFlingBehavior(forgottenFavoritesLazyGridState),
-                        contentPadding = WindowInsets.systemBars
-                            .only(WindowInsetsSides.Horizontal)
-                            .asPaddingValues(),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(60.dp * 4)
-                            .padding(6.dp)
-                    ) {
-                        items(
-                            items = recentActivity!!,
-                            key = { it.id }
-                        ) { item ->
-                            YouTubeCardItem(
-                                item,
-                                onClick = {
-                                    when (item.type) {
-                                        PLAYLIST -> {
-                                            val playlistDb = playlists
-                                                ?.firstOrNull { it.playlist.browseId == item.id }
-
-                                            if (playlistDb != null && playlistDb.songCount != 0)
-                                                navController.navigate("local_playlist/${playlistDb.id}")
-                                            else
-                                                navController.navigate("online_playlist/${item.id}")
-                                        }
-
-                                        ALBUM -> navController.navigate("album/${item.id}")
-
-                                        ARTIST -> navController.navigate("artist/${item.id}")
-                                    }
-                                },
-                                isPlaying = isPlaying,
-                                isActive = when (item.type) {
-                                    PLAYLIST -> queuePlaylistId == item.id
-                                    ALBUM -> queuePlaylistId == item.playlistId
-                                    ARTIST -> (queuePlaylistId == item.radioPlaylistId ||
-                                            queuePlaylistId == item.shufflePlaylistId ||
-                                            queuePlaylistId == item.playlistId)
-                                },
-                            )
-                        }
-                    }
-                }
-            }
 
             quickPicks?.takeIf { it.isNotEmpty() }?.let { quickPicks ->
                 item {
@@ -525,21 +452,24 @@ fun HomeScreen(
                             items = quickPicks,
                             key = { it.id }
                         ) { originalSong ->
-                            // fetch song from database to keep updated
-                            val song by database.song(originalSong.id).collectAsState(initial = originalSong)
                             SongListItem(
-                                song = song!!,
+                                song = originalSong,
+                                navController = navController,
+
+                                isActive = originalSong.id == mediaMetadata?.id,
+                                isPlaying = isPlaying,
+                                inSelectMode = null,
+                                isSelected = false,
+                                onSelectedChange = {},
+                                swipeEnabled = false,
+
+                                thumbnailSize = listThumbnailSize,
                                 onPlay = {
                                     playerConnection.playQueue(
-                                        YouTubeQueue.radio(song!!.toMediaMetadata()),
+                                        YouTubeQueue.radio(originalSong.toMediaMetadata()),
                                         isRadio = true
                                     )
                                 },
-                                onSelectedChange = {},
-                                inSelectMode = null,
-                                isSelected = false,
-                                swipeEnabled = false,
-                                navController = navController,
                                 modifier = Modifier.width(horizontalLazyGridItemWidth)
                             )
                         }
@@ -575,10 +505,18 @@ fun HomeScreen(
                             items = forgottenFavorites,
                             key = { _, song -> song.id }
                         ) { index, originalSong ->
-                            val song by database.song(originalSong.id).collectAsState(initial = originalSong)
-
                             SongListItem(
-                                song = song!!,
+                                song = originalSong,
+                                navController = navController,
+
+                                isActive = originalSong.id == mediaMetadata?.id,
+                                isPlaying = isPlaying,
+                                inSelectMode = null,
+                                isSelected = false,
+                                onSelectedChange = {},
+                                swipeEnabled = false,
+
+                                thumbnailSize = listThumbnailSize,
                                 onPlay = {
                                     playerConnection.playQueue(
                                         ListQueue(
@@ -588,11 +526,6 @@ fun HomeScreen(
                                         )
                                     )
                                 },
-                                onSelectedChange = {},
-                                inSelectMode = null,
-                                isSelected = false,
-                                swipeEnabled = false,
-                                navController = navController,
                                 modifier = Modifier.width(horizontalLazyGridItemWidth)
                             )
                         }

@@ -1,5 +1,7 @@
 package com.dd3boh.outertune.models
 
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.util.fastFirstOrNull
 import androidx.compose.ui.util.fastForEachIndexed
 import androidx.compose.ui.util.fastSumBy
@@ -24,7 +26,7 @@ data class MultiQueueObject(
      * Song id to start watch endpoint
      */
     var playlistId: String? = null,
-    val priorityQueue: MutableList<MediaMetadata> = mutableListOf<MediaMetadata>(),
+    val priorityQueue: SnapshotStateList<MediaMetadata> = mutableStateListOf()
 ) {
 
     /**

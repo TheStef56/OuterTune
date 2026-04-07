@@ -36,8 +36,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
+import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.CloudOff
+import androidx.compose.material.icons.rounded.Error
 import androidx.compose.material.icons.rounded.Explicit
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FolderCopy
@@ -63,7 +66,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -83,8 +85,8 @@ import com.dd3boh.outertune.constants.GridThumbnailHeight
 import com.dd3boh.outertune.constants.ListItemHeight
 import com.dd3boh.outertune.constants.ListThumbnailSize
 import com.dd3boh.outertune.constants.ThumbnailCornerRadius
+import com.dd3boh.outertune.db.entities.PlaylistEntity
 import com.dd3boh.outertune.db.entities.RecentActivityEntity
-import com.dd3boh.outertune.extensions.isPowerSaver
 import com.dd3boh.outertune.models.MediaMetadata
 import com.dd3boh.outertune.models.MultiQueueObject
 import com.dd3boh.outertune.models.toMediaMetadata
@@ -108,7 +110,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
-import kotlin.math.roundToInt
 
 const val ActiveBoxAlpha = 0.6f
 
@@ -326,6 +327,7 @@ fun MediaMetadataListItem(
     showLikedIcon: Boolean = true,
     showInLibraryIcon: Boolean = true,
     showDownloadIcon: Boolean = true,
+    preferredSize: Int,
     trailingContent: @Composable RowScope.() -> Unit = {},
 ) = ListItem(
     title = mediaMetadata.title,
@@ -349,7 +351,8 @@ fun MediaMetadataListItem(
     },
     thumbnailContent = {
         ItemThumbnail(
-            thumbnailUrl = if (mediaMetadata.isLocal) mediaMetadata.localPath else mediaMetadata.thumbnailUrl,
+            thumbnailUrl = mediaMetadata.thumbnailUrl,
+            preferredSize = preferredSize,
             isActive = isActive,
             isPlaying = isPlaying,
             shape = RoundedCornerShape(ThumbnailCornerRadius),
@@ -654,6 +657,7 @@ fun YouTubeCardItem(
 @Composable
 fun ItemThumbnail(
     thumbnailUrl: String?,
+    preferredSize: Int = -1,
     placeholderIcon: ImageVector = Icons.Rounded.MusicNote,
     isActive: Boolean,
     isPlaying: Boolean,
@@ -662,8 +666,6 @@ fun ItemThumbnail(
     albumIndex: Int? = null,
 ) {
     val context = LocalContext.current
-    val density = LocalDensity.current
-    val px = (ListThumbnailSize.value * density.density).roundToInt()
 
     BoxWithConstraints(
         contentAlignment = Alignment.Center,
@@ -672,7 +674,7 @@ fun ItemThumbnail(
         AsyncImage(
             imageLoader = context.imageLoader,
             model = if (thumbnailUrl?.startsWith("/storage") == true) {
-                LocalArtworkPath(thumbnailUrl, px, px)
+                LocalArtworkPath(thumbnailUrl, preferredSize, preferredSize)
             } else {
                 thumbnailUrl
             },
@@ -721,7 +723,7 @@ fun ItemThumbnail(
         }
 
         PlayingIndicatorBox(
-            isActive = isActive && !context.isPowerSaver(),
+            isActive = isActive,
             playWhenReady = isPlaying,
             color = Color.White,
             modifier = Modifier
@@ -797,6 +799,38 @@ object Icon {
                 .size(18.dp)
                 .padding(end = 2.dp)
         )
+    }
+
+    @Composable
+    fun PlaylistIcon(playlist: PlaylistEntity) {
+        /**
+         * 8: Local playlist
+         * 4: Synced/editable playlist
+         * 2: Saved remote playlist
+         * 1: Supports endpoints
+         *
+         */
+        var features = 0
+        if (playlist.isLocal) features += 8
+        if (playlist.isEditable) features += 4
+        if (playlist.bookmarkedAt != null) features += 2
+        if ((playlist.playEndpointParams ?: playlist.radioEndpointParams
+            ?: playlist.shuffleEndpointParams) != null
+        ) features += 1
+        Icon(
+            imageVector = when {
+                // TODO: Icons that actually goddamn match with each other wth is this google???
+                features >= 8 -> Icons.AutoMirrored.Rounded.QueueMusic
+                features >= 4 -> Icons.AutoMirrored.Rounded.PlaylistAdd
+                features >= 2 -> Icons.AutoMirrored.Rounded.PlaylistPlay
+                else -> Icons.Rounded.Error
+            },
+            contentDescription = null,
+            modifier = Modifier
+                .size(18.dp)
+                .padding(end = 2.dp)
+        )
+
     }
 
     @Composable
