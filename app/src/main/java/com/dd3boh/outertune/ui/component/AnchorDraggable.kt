@@ -296,7 +296,6 @@ fun SwipeActionBox(
                     }
 
                     thirdAction?.let {
-                        println("DragActionIcon recomposed at swipeOffset=${swipeOffset.floatValue}, progress=${progress.intValue}")
                         DragActionIcon(
                             color = MaterialTheme.colorScheme.tertiary.copy(alpha = if (progress.intValue == -1) 1f else 0.6f),
                             tint = MaterialTheme.colorScheme.onTertiary,

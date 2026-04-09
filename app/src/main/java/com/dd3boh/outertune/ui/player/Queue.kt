@@ -695,12 +695,14 @@ fun BoxScope.QueueContent(
 
     val songList: @Composable ColumnScope.(PaddingValues) -> Unit = { contentPadding ->
         Log.v("QueueContent", "QC-s_b")
+        val thumbnailSize = (ListThumbnailSize.value * density.density).roundToInt()
+
         LazyColumn(
-            state = lazySongsListStatePriority,
+            state = lazySongsListState, // single scroll state for both lists
             contentPadding = contentPadding,
             modifier = if (queueState != null) Modifier.nestedScroll(queueState.preUpPostDownNestedScrollConnection) else Modifier
         ) {
-            val thumbnailSize = (ListThumbnailSize.value * density.density).roundToInt()
+            // ----- PRIORITY QUEUE -----
             if (qb.getCurrentQueue()?.priorityQueue?.isNotEmpty() == true) {
                 itemsIndexed(
                     items = qb.getCurrentQueue()!!.priorityQueue,
@@ -710,95 +712,126 @@ fun BoxScope.QueueContent(
                         state = reorderableStatePriority,
                         key = window.hashCode()
                     ) {
-                        MediaMetadataListItem(
-                            mediaMetadata = window,
-                            isActive = false,
-                            isPlaying = false,
-                            trailingContent = {
-                                if (inSelectMode) {
-                                    Checkbox(
-                                        checked = window.hashCode() in selectedItems,
-                                        onCheckedChange = {} // onCheckedChange
-                                    )
-                                } else {
-                                    IconButton(
-                                        onClick = {
-                                            menuState.show {
-                                                PlayerMenu(
-                                                    mediaMetadata = window,
-                                                    navController = navController,
-                                                    playerBottomSheetState = playerState,
-                                                    onDismiss = {
-                                                        menuState.dismiss()
-                                                    },
-                                                )
-                                            }
-                                            haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                        val priorityDismissState = rememberSwipeToDismissBoxState(
+                            positionalThreshold = { totalDistance -> totalDistance },
+                            confirmValueChange = { dismissValue ->
+                                when (dismissValue) {
+                                    SwipeToDismissBoxValue.StartToEnd,
+                                    SwipeToDismissBoxValue.EndToStart -> {
+                                        val priorityQueue = qb.getCurrentQueue()!!.priorityQueue
+                                        if (priorityQueue.isNotEmpty()) {
+                                            priorityQueue.remove(window)
                                         }
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Rounded.MoreVert,
-                                            contentDescription = null
-                                        )
+                                        haptic.performHapticFeedback(HapticFeedbackType.Confirm)
+                                        true
                                     }
-                                    if (!lockQueue && !detachedHead) {
-                                        Icon(
-                                            imageVector = Icons.Rounded.DragHandle,
-                                            contentDescription = null,
-                                            modifier = Modifier
-                                                .padding(end = 16.dp)
-                                                .draggableHandle()
-                                        )
-                                    }
+                                    SwipeToDismissBoxValue.Settled -> false
                                 }
-                            },
-                            isSelected = inSelectMode && window.hashCode() in selectedItems,
-                            preferredSize = thumbnailSize,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .combinedClickable(
-                                    onClick = {
-                                        if (inSelectMode) {
-//                                            onCheckedChange(window.hashCode() !in selectedItems)
-                                        } else {
-                                            coroutineScope.launch(Dispatchers.Main) {
-                                                if (index == currentWindowIndex && !detachedHead) {
-                                                    playerConnection.player.togglePlayPause()
-                                                } else {
-                                                    val index = index // race condition...?
-                                                    if (detachedHead) {
-                                                        detachedQueue?.setCurrentQueuePos(index)
-                                                        qb.setCurrQueue(detachedQueue, false)
+                            }
+                        )
+
+                        val onCheckedChange: (Boolean) -> Unit = {
+                            haptic.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
+                            if (it) selectedItems.add(window.hashCode()) else selectedItems.remove(window.hashCode())
+                        }
+
+                        val priorityContent = @Composable {
+                            MediaMetadataListItem(
+                                mediaMetadata = window,
+                                isActive = false,
+                                isPlaying = false,
+                                trailingContent = {
+                                    if (inSelectMode) {
+                                        Checkbox(
+                                            checked = window.hashCode() in selectedItems,
+                                            onCheckedChange = {}
+                                        )
+                                    } else {
+                                        IconButton(
+                                            onClick = {
+                                                menuState.show {
+                                                    PlayerMenu(
+                                                        mediaMetadata = window,
+                                                        navController = navController,
+                                                        playerBottomSheetState = playerState,
+                                                        onDismiss = {
+                                                            menuState.dismiss()
+                                                        },
+                                                    )
+                                                }
+                                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                            }
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.MoreVert,
+                                                contentDescription = null
+                                            )
+                                        }
+                                        if (!lockQueue && !detachedHead) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.DragHandle,
+                                                contentDescription = null,
+                                                modifier = Modifier
+                                                    .padding(end = 16.dp)
+                                                    .draggableHandle()
+                                            )
+                                        }
+                                    }
+                                },
+                                isSelected = inSelectMode && window.hashCode() in selectedItems,
+                                preferredSize = thumbnailSize,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .combinedClickable(
+                                        onClick = {
+                                            if (inSelectMode) {
+                                                 onCheckedChange(window.hashCode() !in selectedItems)
+                                            } else {
+                                                coroutineScope.launch(Dispatchers.Main) {
+                                                    if (index == currentWindowIndex && !detachedHead) {
+                                                        playerConnection.player.togglePlayPause()
                                                     } else {
-                                                        playerConnection.player.seekToDefaultPosition(
-                                                            index
-                                                        )
+                                                        val index = index
+                                                        if (detachedHead) {
+                                                            detachedQueue?.setCurrentQueuePos(index)
+                                                            qb.setCurrQueue(detachedQueue, false)
+                                                        } else {
+                                                            playerConnection.player.seekToDefaultPosition(index)
+                                                        }
+                                                        playerConnection.player.prepare()
+                                                        playerConnection.player.playWhenReady = true
+                                                        detachedHead = false
                                                     }
-                                                    playerConnection.player.prepare() // else cannot click to play after auto-skip onError stop
-                                                    playerConnection.player.playWhenReady = true
-                                                    detachedHead = false
                                                 }
                                             }
+                                        },
+                                        onLongClick = {
+                                            if (!inSelectMode) {
+                                                inSelectMode = true
+                                                selectedItems.add(window.hashCode())
+                                            }
                                         }
-                                    },
-                                    onLongClick = {
-                                        if (!inSelectMode) {
-                                            inSelectMode = true
-                                            selectedItems.add(window.hashCode())
-                                        }
-                                    }
-                                ),
-                        )
+                                    )
+                            )
+                        }
+                        if (!lockQueue && !inSelectMode && !detachedHead) {
+                            SwipeToDismissBox(
+                                state = priorityDismissState,
+                                backgroundContent = {},
+                                content = { priorityContent() }
+                            )
+                        } else {
+                            priorityContent()
+                        }
                     }
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
 
-        }
-        LazyColumn(
-            state = lazySongsListState,
-            contentPadding = contentPadding,
-            modifier = if (queueState != null) Modifier.nestedScroll(queueState.preUpPostDownNestedScrollConnection) else Modifier
-        ) {
+            // ----- NORMAL QUEUE -----
             if ((if (isSearching) filteredSongs else mutableSongs).isEmpty()) {
                 item {
                     EmptyPlaceholder(
@@ -809,9 +842,9 @@ fun BoxScope.QueueContent(
                 }
             }
 
-            val thumbnailSize = (ListThumbnailSize.value * density.density).roundToInt()
+            val normalItems = if (isSearching) filteredSongs else mutableSongs
             itemsIndexed(
-                items = if (isSearching) filteredSongs else mutableSongs,
+                items = normalItems,
                 key = { _, item -> item.hashCode() },
                 contentType = { _, _ -> CONTENT_TYPE_SONG }
             ) { index, window ->
@@ -820,43 +853,26 @@ fun BoxScope.QueueContent(
                     key = window.hashCode()
                 ) {
                     val dismissState = rememberSwipeToDismissBoxState(
-                        positionalThreshold = { totalDistance ->
-                            totalDistance
-                        },
+                        positionalThreshold = { totalDistance -> totalDistance },
                         confirmValueChange = { dismissValue ->
                             when (dismissValue) {
-                                SwipeToDismissBoxValue.StartToEnd -> {
-                                    if (qb.removeCurrentQueueSong(index)) {
-                                        playerConnection.player.removeMediaItem(index)
-                                        mutableSongs.removeAt(index)
-                                    }
-                                    haptic.performHapticFeedback(HapticFeedbackType.Confirm)
-                                    return@rememberSwipeToDismissBoxState true
-                                }
-
+                                SwipeToDismissBoxValue.StartToEnd,
                                 SwipeToDismissBoxValue.EndToStart -> {
-                                    if (qb.removeCurrentQueueSong(index)) {
+                                    if (qb.getCurrentQueue()?.queue?.isNotEmpty() == true && qb.removeCurrentQueueSong(index)) {
                                         playerConnection.player.removeMediaItem(index)
-                                        mutableSongs.removeAt(index)
+                                        mutableSongs.remove(window)
                                     }
                                     haptic.performHapticFeedback(HapticFeedbackType.Confirm)
-                                    return@rememberSwipeToDismissBoxState true
+                                    true
                                 }
-
-                                SwipeToDismissBoxValue.Settled -> {
-                                    return@rememberSwipeToDismissBoxState false
-                                }
+                                SwipeToDismissBoxValue.Settled -> false
                             }
                         }
                     )
 
                     val onCheckedChange: (Boolean) -> Unit = {
                         haptic.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
-                        if (it) {
-                            selectedItems.add(window.hashCode())
-                        } else {
-                            selectedItems.remove(window.hashCode())
-                        }
+                        if (it) selectedItems.add(window.hashCode()) else selectedItems.remove(window.hashCode())
                     }
 
                     val content = @Composable {
@@ -878,9 +894,7 @@ fun BoxScope.QueueContent(
                                                     mediaMetadata = window,
                                                     navController = navController,
                                                     playerBottomSheetState = playerState,
-                                                    onDismiss = {
-                                                        menuState.dismiss()
-                                                    },
+                                                    onDismiss = { menuState.dismiss() },
                                                 )
                                             }
                                             haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
@@ -895,9 +909,7 @@ fun BoxScope.QueueContent(
                                         Icon(
                                             imageVector = Icons.Rounded.DragHandle,
                                             contentDescription = null,
-                                            modifier = Modifier
-                                                .padding(end = 16.dp)
-                                                .draggableHandle()
+                                            modifier = Modifier.padding(end = 16.dp).draggableHandle()
                                         )
                                     }
                                 }
@@ -908,21 +920,20 @@ fun BoxScope.QueueContent(
                                 .fillMaxWidth()
                                 .combinedClickable(
                                     onClick = {
-                                        if (inSelectMode) {
-                                            onCheckedChange(window.hashCode() !in selectedItems)
-                                        } else {
+                                        if (inSelectMode) onCheckedChange(window.hashCode() !in selectedItems)
+                                        else {
                                             coroutineScope.launch(Dispatchers.Main) {
                                                 if (index == currentWindowIndex && !detachedHead) {
                                                     playerConnection.player.togglePlayPause()
                                                 } else {
-                                                    val index = index // race condition...?
+                                                    val index = index
                                                     if (detachedHead) {
                                                         detachedQueue?.setCurrentQueuePos(index)
                                                         qb.setCurrQueue(detachedQueue, false)
                                                     } else {
                                                         playerConnection.player.seekToDefaultPosition(index)
                                                     }
-                                                    playerConnection.player.prepare() // else cannot click to play after auto-skip onError stop
+                                                    playerConnection.player.prepare()
                                                     playerConnection.player.playWhenReady = true
                                                     exitDetachHead()
                                                 }
@@ -951,9 +962,8 @@ fun BoxScope.QueueContent(
                 }
             }
         }
-        LazyColumnScrollbar(
-            state = lazySongsListState,
-        )
+
+        LazyColumnScrollbar(state = lazySongsListState)
     }
 
     val searchBar: @Composable ColumnScope.() -> Unit = {
