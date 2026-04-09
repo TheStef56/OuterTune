@@ -8,7 +8,6 @@
 
 package com.dd3boh.outertune.ui.component
 
-import android.util.Log
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -19,7 +18,6 @@ import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -35,8 +33,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableFloatState
-import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -47,10 +43,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -166,6 +162,7 @@ fun SwipeActionBox(
             val swipeOffset = remember { mutableFloatStateOf(0f) }
             val progress = remember { mutableIntStateOf(0) } // swipeOffset but to track haptics and opacity
             val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+            val density = LocalDensity.current.density.dp.value
             val firstThreshold = (screenWidth * 0.4f).value
             val secondThreshold = (screenWidth * 0.8f).value
 
@@ -299,19 +296,20 @@ fun SwipeActionBox(
                     }
 
                     thirdAction?.let {
+                        println("DragActionIcon recomposed at swipeOffset=${swipeOffset.floatValue}, progress=${progress.intValue}")
                         DragActionIcon(
-                            color = MaterialTheme.colorScheme.tertiary,
+                            color = MaterialTheme.colorScheme.tertiary.copy(alpha = if (progress.intValue == -1) 1f else 0.6f),
                             tint = MaterialTheme.colorScheme.onTertiary,
                             icon = it.first,
                             contentAlignment = Alignment.CenterStart,
                             modifier = Modifier
-                                .alpha(if (progress.intValue == -1) 1f else 0.6f)
+//                                .alpha(if (progress.intValue == -1) 1f else 0.6f) doesn't work ffs
                                 .width(defaultActionSize)
                                 .fillMaxHeight()
-                                .align(Alignment.CenterEnd)
+                                .align (Alignment.CenterStart)
                                 .offset {
                                     IntOffset(
-                                        (screenWidth.value + swipeOffset.floatValue)
+                                        (screenWidth.value*density + swipeOffset.floatValue)
                                             .roundToInt(),
                                         0
                                     )
