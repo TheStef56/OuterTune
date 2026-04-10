@@ -26,7 +26,6 @@ data class MultiQueueObject(
      * Song id to start watch endpoint
      */
     var playlistId: String? = null,
-    val priorityQueue: SnapshotStateList<MediaMetadata> = mutableStateListOf()
 ) {
 
     /**

@@ -19,6 +19,7 @@ import android.net.ConnectivityManager
 import android.os.Binder
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.core.content.getSystemService
 import androidx.core.net.toUri
 import androidx.datastore.preferences.core.edit
@@ -64,6 +65,7 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionToken
+import com.dd3boh.outertune.LocalPlayerConnection
 import com.dd3boh.outertune.MainActivity
 import com.dd3boh.outertune.R
 import com.dd3boh.outertune.constants.AudioDecoderKey
@@ -543,7 +545,7 @@ class MusicService : MediaLibraryService(),
         }
     }
 
-    fun enqueuePriority(items: List<MediaItem>, startEnd: Boolean) {
+    fun enqueuePriority(items: List<MediaItem>, startEnd: Boolean, priorityQueue: SnapshotStateList<MediaMetadata>) {
         scope.launch {
             if (!qbInit.value) {
 
@@ -559,9 +561,9 @@ class MusicService : MediaLibraryService(),
             } else {
                 val currentQueue = queueBoard.value.getCurrentQueue()
                 if (startEnd) {
-                    currentQueue?.priorityQueue?.addAll(0,items.mapNotNull { it.metadata?.copy(composeUidWorkaround = Math.random()) })
+                    priorityQueue.addAll(0,items.mapNotNull { it.metadata?.copy(composeUidWorkaround = Math.random()) })
                 } else {
-                    currentQueue?.priorityQueue?.addAll(items.mapNotNull { it.metadata?.copy(composeUidWorkaround = Math.random()) })
+                    priorityQueue.addAll(items.mapNotNull { it.metadata?.copy(composeUidWorkaround = Math.random()) })
                 }
             }
         }

@@ -703,9 +703,10 @@ fun BoxScope.QueueContent(
             modifier = if (queueState != null) Modifier.nestedScroll(queueState.preUpPostDownNestedScrollConnection) else Modifier
         ) {
             // ----- PRIORITY QUEUE -----
-            if (qb.getCurrentQueue()?.priorityQueue?.isNotEmpty() == true) {
+            val priorityQueue = playerConnection.priorityQueue
+            if (playerConnection.priorityQueue.isNotEmpty()) {
                 itemsIndexed(
-                    items = qb.getCurrentQueue()!!.priorityQueue,
+                    items = priorityQueue,
                     key = { _, item -> item.hashCode() }
                 ) { index, window ->
                     ReorderableItem(
@@ -718,7 +719,6 @@ fun BoxScope.QueueContent(
                                 when (dismissValue) {
                                     SwipeToDismissBoxValue.StartToEnd,
                                     SwipeToDismissBoxValue.EndToStart -> {
-                                        val priorityQueue = qb.getCurrentQueue()!!.priorityQueue
                                         if (priorityQueue.isNotEmpty()) {
                                             priorityQueue.remove(window)
                                         }
