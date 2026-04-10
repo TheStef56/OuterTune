@@ -28,6 +28,7 @@ import com.dd3boh.outertune.db.entities.PlaylistEntity
 import com.dd3boh.outertune.db.entities.PlaylistEntity.Companion.generatePlaylistId
 import com.dd3boh.outertune.db.entities.PlaylistSongMap
 import com.dd3boh.outertune.db.entities.PlaylistSongMapPreview
+import com.dd3boh.outertune.db.entities.PriorityQueueSongMap
 import com.dd3boh.outertune.db.entities.QueueEntity
 import com.dd3boh.outertune.db.entities.QueueSongMap
 import com.dd3boh.outertune.db.entities.RecentActivityEntity
@@ -68,7 +69,7 @@ class MusicDatabase(
     fun close() = delegate.close()
 
     companion object {
-        const val MUSIC_DATABASE_VERSION = 20
+        const val MUSIC_DATABASE_VERSION = 21
     }
 }
 
@@ -85,6 +86,7 @@ class MusicDatabase(
         GenreEntity::class,
         QueueEntity::class,
         QueueSongMap::class,
+        PriorityQueueSongMap::class,
         SongGenreMap::class,
         SearchHistory::class,
         FormatEntity::class,
@@ -134,6 +136,7 @@ abstract class InternalDatabase : RoomDatabase() {
                     .addMigrations(MIGRATION_14_15)
                     .addMigrations(MIGRATION_15_16)
                     .addMigrations(MIGRATION_16_17)
+                    .addMigrations(MIGRATION_20_21)
                     .build()
             )
 
@@ -145,6 +148,7 @@ abstract class InternalDatabase : RoomDatabase() {
                     .addMigrations(MIGRATION_14_15)
                     .addMigrations(MIGRATION_15_16)
                     .addMigrations(MIGRATION_16_17)
+                    .addMigrations(MIGRATION_20_21)
                     .build()
             )
     }
@@ -482,6 +486,20 @@ val MIGRATION_16_17 = object : Migration(16, 17) {
     }
 }
 
+val MIGRATION_20_21 = object : Migration(20, 21) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS priority_queue_song_map (
+                queueId INTEGER NOT NULL,
+                songId TEXT NOT NULL,
+                shuffledIndex INTEGER NOT NULL,
+                PRIMARY KEY(queueId, songId),
+                FOREIGN KEY(queueId) REFERENCES queue(id) ON DELETE CASCADE,
+                FOREIGN KEY(songId) REFERENCES song(id) ON DELETE CASCADE
+            )
+        """.trimIndent())
+    }
+}
 @DeleteColumn.Entries(
     DeleteColumn(tableName = "song", columnName = "isTrash"),
     DeleteColumn(tableName = "playlist", columnName = "author"),

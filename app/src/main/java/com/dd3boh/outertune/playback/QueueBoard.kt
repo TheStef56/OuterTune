@@ -676,6 +676,7 @@ class QueueBoard(
      */
     fun getAllQueues() = masterQueues.toImmutableList()
 
+    fun getPriorityQueue() = player.priorityQueue.toImmutableList()
 
     /**
      * Get the index of the current queue

@@ -703,8 +703,8 @@ fun BoxScope.QueueContent(
             modifier = if (queueState != null) Modifier.nestedScroll(queueState.preUpPostDownNestedScrollConnection) else Modifier
         ) {
             // ----- PRIORITY QUEUE -----
-            val priorityQueue = playerConnection.priorityQueue
-            if (playerConnection.priorityQueue.isNotEmpty()) {
+            val priorityQueue = playerConnection.service.priorityQueue
+            if (playerConnection.service.priorityQueue.isNotEmpty()) {
                 itemsIndexed(
                     items = priorityQueue,
                     key = { _, item -> item.hashCode() }

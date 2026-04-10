@@ -11,7 +11,6 @@ package com.dd3boh.outertune.playback
 
 import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
@@ -55,7 +54,6 @@ class PlayerConnection(
 
     val service = binder.getService()!!
     val queueBoard = service.queueBoard
-    val priorityQueue: SnapshotStateList<MediaMetadata> = mutableStateListOf()
     val lastQueueId = MutableStateFlow(queueBoard.value.getCurrentQueue()?.id)
     val player = service.player
     val scope = binder.viewModelScope
@@ -158,7 +156,7 @@ class PlayerConnection(
      * Add items to queue, right after current playing item
      */
     fun enqueuePriority(items: List<MediaItem>, startEnd: Boolean) {
-        service.enqueuePriority(items, startEnd, priorityQueue)
+        service.enqueuePriority(items, startEnd)
     }
 
     fun toggleLike() {
@@ -171,8 +169,8 @@ class PlayerConnection(
 
     private fun playNextPrioritySong() {
         val currentQueue = service.queueBoard.value.getCurrentQueue()
-        if (currentQueue != null && priorityQueue.isNotEmpty()) {
-            val next = priorityQueue.removeAt(0)
+        if (currentQueue != null && service.priorityQueue.isNotEmpty()) {
+            val next = service.priorityQueue.removeAt(0)
 
             player.seekToPreviousMediaItem()
             player.addMediaItem(player.currentMediaItemIndex + 1, next.toMediaItem())
