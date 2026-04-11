@@ -1,5 +1,6 @@
 package com.dd3boh.outertune.db.daos
 
+import android.util.Log
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
@@ -67,21 +68,14 @@ interface QueueDao {
         return resultQueues
     }
 
-    suspend fun readPriorityQueue(): List<MediaMetadata> {
-        val resultQueues = ArrayList<MediaMetadata>()
-        val priorityQueue = getPriorityQueueSongs().first()
-
-        priorityQueue.forEach { it ->
-            queueSong(it.songId).collect { song ->
-                if (song != null) {
-                    resultQueues.add(
-                        song.toMediaMetadata())
-                }
-            }
-        }
-
-        return resultQueues
-    }
+    @Query("""
+        SELECT song.*
+        FROM song
+        INNER JOIN priority_queue_song_map pq
+        ON song.id = pq.songId
+        ORDER BY pq.shuffledIndex
+    """)
+    suspend fun readPriorityQueue(): List<Song>
 
     suspend fun getResumptionQueue(): MultiQueueObject? {
         val queues = getAllQueues().first()
@@ -122,9 +116,6 @@ interface QueueDao {
     @Update
     fun update(queue: QueueEntity)
 
-    @Update
-    fun update(priorityQueue: PriorityQueueSongMap)
-
     @Transaction
     fun updateQueue(mq: MultiQueueObject) {
         update(
@@ -140,12 +131,11 @@ interface QueueDao {
         )
     }
 
-    @Transaction
-    fun updatePriorityQueue(pq: List<MediaMetadata>) {
-        val pq = pq.toList() // please no more ConcurrentModificationException I beg you
+    suspend fun insertPriorityQueue(pq: List<MediaMetadata>) {
+        val pq = pq.toList()
         CoroutineScope(Dispatchers.IO).launch {
             pq.forEachIndexed { index, media ->
-                update(
+                insert(
                     PriorityQueueSongMap(
                         songId = media.id,
                         shuffledIndex = index.toLong()
@@ -173,6 +163,9 @@ interface QueueDao {
 
     @Delete
     fun delete(priorityQueue: PriorityQueueSongMap)
+
+    @Query("DELETE FROM priority_queue_song_map")
+    fun deleteAllPriorityQueue()
 
     @Query("DELETE FROM queue")
     fun deleteAllQueues()

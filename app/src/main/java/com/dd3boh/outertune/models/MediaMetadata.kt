@@ -1,7 +1,6 @@
 package com.dd3boh.outertune.models
 
 import androidx.compose.runtime.Immutable
-import androidx.room.Entity
 import com.dd3boh.outertune.db.entities.Song
 import com.dd3boh.outertune.db.entities.SongEntity
 import com.dd3boh.outertune.ui.utils.resize
@@ -11,7 +10,6 @@ import java.io.Serializable
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 
-@Entity
 @Immutable
 data class MediaMetadata(
     val id: String,

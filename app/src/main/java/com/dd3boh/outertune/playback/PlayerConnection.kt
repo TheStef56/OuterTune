@@ -24,6 +24,7 @@ import androidx.media3.common.Player.STATE_ENDED
 import androidx.media3.common.Timeline
 import com.dd3boh.outertune.db.MusicDatabase
 import com.dd3boh.outertune.db.entities.LyricsEntity.Companion.uninitializedLyric
+import com.dd3boh.outertune.db.entities.PriorityQueueSongMap
 import com.dd3boh.outertune.extensions.currentMetadata
 import com.dd3boh.outertune.extensions.getCurrentQueueIndex
 import com.dd3boh.outertune.extensions.getQueueWindows
@@ -32,6 +33,8 @@ import com.dd3boh.outertune.extensions.toMediaItem
 import com.dd3boh.outertune.models.MediaMetadata
 import com.dd3boh.outertune.playback.queues.Queue
 import com.dd3boh.outertune.utils.reportException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -171,6 +174,10 @@ class PlayerConnection(
         val currentQueue = service.queueBoard.value.getCurrentQueue()
         if (currentQueue != null && service.priorityQueue.isNotEmpty()) {
             val next = service.priorityQueue.removeAt(0)
+            CoroutineScope(Dispatchers.IO).launch {
+                database.deleteAllPriorityQueue()
+                database.insertPriorityQueue(service.priorityQueue)
+            }
 
             player.seekToPreviousMediaItem()
             player.addMediaItem(player.currentMediaItemIndex + 1, next.toMediaItem())

@@ -490,14 +490,14 @@ val MIGRATION_20_21 = object : Migration(20, 21) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("""
             CREATE TABLE IF NOT EXISTS priority_queue_song_map (
-                queueId INTEGER NOT NULL,
+                id INTEGER NOT NULL,
                 songId TEXT NOT NULL,
                 shuffledIndex INTEGER NOT NULL,
-                PRIMARY KEY(queueId, songId),
-                FOREIGN KEY(queueId) REFERENCES queue(id) ON DELETE CASCADE,
+                PRIMARY KEY(id),
                 FOREIGN KEY(songId) REFERENCES song(id) ON DELETE CASCADE
             )
         """.trimIndent())
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_priority_queue_song_map_songId` ON `priority_queue_song_map` (`songId`)")
     }
 }
 @DeleteColumn.Entries(

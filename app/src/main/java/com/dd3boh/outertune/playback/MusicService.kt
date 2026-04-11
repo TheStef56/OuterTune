@@ -97,6 +97,7 @@ import com.dd3boh.outertune.constants.minPlaybackDurKey
 import com.dd3boh.outertune.db.MusicDatabase
 import com.dd3boh.outertune.db.entities.Event
 import com.dd3boh.outertune.db.entities.FormatEntity
+import com.dd3boh.outertune.db.entities.PriorityQueueSongMap
 import com.dd3boh.outertune.db.entities.RelatedSongMap
 import com.dd3boh.outertune.di.AppModule.PlayerCache
 import com.dd3boh.outertune.di.DownloadCache
@@ -568,6 +569,10 @@ class MusicService : MediaLibraryService(),
                 } else {
                     priorityQueue.addAll(items.mapNotNull { it.metadata?.copy(composeUidWorkaround = Math.random()) })
                 }
+                CoroutineScope(Dispatchers.IO).launch {
+                    database.deleteAllPriorityQueue()
+                    database.insertPriorityQueue(priorityQueue)
+                }
             }
         }
     }
@@ -601,9 +606,7 @@ class MusicService : MediaLibraryService(),
         val maxQueues = dataStore.get(MaxQueuesKey, 19)
         if (persistQueue) {
             queueBoard.value = QueueBoard(this, queueBoard.value.masterQueues, database.readQueue().toMutableList(), maxQueues)
-            val priorq = database.readPriorityQueue()
-            Log.d("PRIORQ: ", priorq.toString())
-            priorityQueue.addAll(priorq)
+            priorityQueue.addAll(database.readPriorityQueue().map { it -> it.toMediaMetadata() })
         } else {
             queueBoard.value = QueueBoard(this, queueBoard.value.masterQueues, maxQueues = maxQueues)
         }
@@ -622,6 +625,7 @@ class MusicService : MediaLibraryService(),
             }
         }
         // do not replace the object. Can lead to entire queue being deleted even though it is supposed to be saved already
+        priorityQueue.clear()
         qbInit.value = false
         Log.i(TAG, "-deInitQueue()")
     }
@@ -631,7 +635,7 @@ class MusicService : MediaLibraryService(),
         val priorityQueue = queueBoard.value.getPriorityQueue()
         data.last().lastSongPos = currentPosition
         database.updateAllQueues(data)
-        database.updatePriorityQueue(priorityQueue)
+        database.insertPriorityQueue(priorityQueue)
     }
 
 
