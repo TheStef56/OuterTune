@@ -703,8 +703,8 @@ fun BoxScope.QueueContent(
             modifier = if (queueState != null) Modifier.nestedScroll(queueState.preUpPostDownNestedScrollConnection) else Modifier
         ) {
             // ----- PRIORITY QUEUE -----
-            val priorityQueue = playerConnection.priorityQueue
-            if (playerConnection.priorityQueue.isNotEmpty()) {
+            val priorityQueue = playerConnection.service.priorityQueue
+            if (playerConnection.service.priorityQueue.isNotEmpty()) {
                 itemsIndexed(
                     items = priorityQueue,
                     key = { _, item -> item.hashCode() }
@@ -785,7 +785,7 @@ fun BoxScope.QueueContent(
                                     .combinedClickable(
                                         onClick = {
                                             if (inSelectMode) {
-                                                 onCheckedChange(window.hashCode() !in selectedItems)
+                                                onCheckedChange(window.hashCode() !in selectedItems)
                                             } else {
                                                 coroutineScope.launch(Dispatchers.Main) {
                                                     if (index == currentWindowIndex && !detachedHead) {

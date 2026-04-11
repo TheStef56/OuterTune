@@ -1,5 +1,6 @@
 package com.dd3boh.outertune.db.daos
 
+import android.util.Log
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
@@ -7,9 +8,12 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
+import com.dd3boh.outertune.db.entities.PriorityQueueSongMap
 import com.dd3boh.outertune.db.entities.QueueEntity
 import com.dd3boh.outertune.db.entities.QueueSong
 import com.dd3boh.outertune.db.entities.QueueSongMap
+import com.dd3boh.outertune.db.entities.Song
+import com.dd3boh.outertune.models.MediaMetadata
 import com.dd3boh.outertune.models.MultiQueueObject
 import com.dd3boh.outertune.models.toMediaMetadata
 import kotlinx.coroutines.CoroutineScope
@@ -24,6 +28,13 @@ interface QueueDao {
     // region Gets
     @Query("SELECT * from queue ORDER BY `index`")
     fun getAllQueues(): Flow<List<QueueEntity>>
+
+    @Transaction
+    @Query("SELECT * FROM song WHERE id = :songId")
+    fun queueSong(songId: String?): Flow<Song?>
+
+    @Query("SELECT * from priority_queue_song_map ORDER BY `shuffledIndex`")
+    fun getPriorityQueueSongs(): Flow<List<PriorityQueueSongMap>>
 
     @Transaction
     @Query("SELECT song.*, queue_song_map.shuffledIndex from queue_song_map JOIN song ON queue_song_map.songId = song.id WHERE queueId = :queueId ORDER BY `index`")
@@ -57,6 +68,15 @@ interface QueueDao {
         return resultQueues
     }
 
+    @Query("""
+        SELECT song.*
+        FROM song
+        INNER JOIN priority_queue_song_map pq
+        ON song.id = pq.songId
+        ORDER BY pq.shuffledIndex
+    """)
+    suspend fun readPriorityQueue(): List<Song>
+
     suspend fun getResumptionQueue(): MultiQueueObject? {
         val queues = getAllQueues().first()
         if (queues.isEmpty()) return null
@@ -86,6 +106,9 @@ interface QueueDao {
     fun insert(queue: QueueEntity)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insert(priorityQueueSong: PriorityQueueSongMap)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insert(queueSong: QueueSongMap)
     // endregion
 
@@ -108,6 +131,20 @@ interface QueueDao {
         )
     }
 
+    suspend fun insertPriorityQueue(pq: List<MediaMetadata>) {
+        val pq = pq.toList()
+        CoroutineScope(Dispatchers.IO).launch {
+            pq.forEachIndexed { index, media ->
+                insert(
+                    PriorityQueueSongMap(
+                        songId = media.id,
+                        shuffledIndex = index.toLong()
+                    )
+                )
+            }
+        }
+    }
+
     @Transaction
     fun updateAllQueues(mqs: List<MultiQueueObject>) {
         val mqs = mqs.toList() // please no more ConcurrentModificationException I beg you
@@ -123,6 +160,12 @@ interface QueueDao {
     // region Deletes
     @Delete
     fun delete(mq: QueueEntity)
+
+    @Delete
+    fun delete(priorityQueue: PriorityQueueSongMap)
+
+    @Query("DELETE FROM priority_queue_song_map")
+    fun deleteAllPriorityQueue()
 
     @Query("DELETE FROM queue")
     fun deleteAllQueues()
