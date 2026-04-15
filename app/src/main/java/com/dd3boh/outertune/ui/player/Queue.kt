@@ -385,6 +385,7 @@ fun BoxScope.QueueContent(
 
         val fromIndex = from.index
         val toIndex = to.index
+        val spacers = 1
 
         dragInfo = if (dragInfo == null) {
             fromIndex to toIndex
@@ -399,9 +400,9 @@ fun BoxScope.QueueContent(
             }
 
             // NORMAL section
-            fromIndex >= prioritySize && toIndex >= prioritySize -> {
-                val adjustedFrom = fromIndex - prioritySize
-                val adjustedTo = toIndex - prioritySize
+            fromIndex >= prioritySize + spacers && toIndex >= prioritySize + spacers -> {
+                val adjustedFrom = fromIndex - prioritySize - spacers
+                val adjustedTo = toIndex - prioritySize - spacers
                 mutableSongs.move(adjustedFrom, adjustedTo)
             }
 
@@ -424,6 +425,9 @@ fun BoxScope.QueueContent(
                     // PRIORITY
                     from < prioritySize && to < prioritySize -> {
                         playerConnection.service.priorityQueue.move(from, to)
+                        playerConnection.service.priorityQueue.forEachIndexed { idx, it ->
+                            it.shuffleIndex = idx
+                        }
                     }
 
                     // NORMAL
@@ -801,6 +805,7 @@ fun BoxScope.QueueContent(
                 }
             }
 
+            item { Spacer(Modifier.height(24.dp)) }
             // -------------------------
             // NORMAL SECTION
             // -------------------------
@@ -1083,7 +1088,7 @@ fun BoxScope.QueueContent(
                         }
                     }
 
-                    Spacer(Modifier.width(16.dp))
+                    Spacer(Modifier.width(8.dp))
 
                     Box(modifier = Modifier.weight(1f)) {
                         ResizableIconButton(
