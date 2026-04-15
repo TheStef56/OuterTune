@@ -170,22 +170,26 @@ class PlayerConnection(
         service.toggleLibrary()
     }
 
+    fun updatePriorityQueue() {
+        CoroutineScope(Dispatchers.IO).launch {
+            database.deleteAllPriorityQueue()
+            database.insertPriorityQueue(service.priorityQueue)
+        }
+    }
+
     private fun playNextPrioritySong() {
         val currentQueue = service.queueBoard.value.getCurrentQueue()
         if (currentQueue != null && service.priorityQueue.isNotEmpty()) {
             val next = service.priorityQueue.removeAt(0)
-            CoroutineScope(Dispatchers.IO).launch {
-                database.deleteAllPriorityQueue()
-                database.insertPriorityQueue(service.priorityQueue)
-            }
+            updatePriorityQueue()
 
+            ignoreTransitions = 3
             player.seekToPreviousMediaItem()
             queueBoard.value.getCurrentQueue()?.let {
                 queueBoard.value.addSongsToQueue(it, player.currentMediaItemIndex + 1, listOf(next))
             }
             player.seekToPreviousMediaItem()
             player.seekToPreviousMediaItem()
-            ignoreTransitions = 3
         }
     }
 

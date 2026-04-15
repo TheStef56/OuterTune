@@ -134,11 +134,11 @@ interface QueueDao {
     suspend fun insertPriorityQueue(pq: List<MediaMetadata>) {
         val pq = pq.toList()
         CoroutineScope(Dispatchers.IO).launch {
-            pq.forEachIndexed { index, media ->
+            pq.forEach {  media ->
                 insert(
                     PriorityQueueSongMap(
                         songId = media.id,
-                        shuffledIndex = index.toLong()
+                        shuffledIndex = media.shuffleIndex.toLong()
                     )
                 )
             }
