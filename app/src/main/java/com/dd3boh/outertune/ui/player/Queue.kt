@@ -106,6 +106,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastAny
+import androidx.datastore.dataStore
 import androidx.media3.common.Player.REPEAT_MODE_ALL
 import androidx.media3.common.Player.REPEAT_MODE_OFF
 import androidx.media3.common.Player.REPEAT_MODE_ONE
@@ -319,7 +320,6 @@ fun BoxScope.QueueContent(
     val mutableSongs = remember { mutableStateListOf<MediaMetadata>() }
     val mutableSongsPriority = remember { mutableStateListOf<MediaMetadata>() }
     val lazySongsListState = rememberLazyListState()
-    val lazySongsListStatePriority = rememberLazyListState()
 
     // multiselect
     var inSelectMode by remember {
@@ -428,6 +428,7 @@ fun BoxScope.QueueContent(
                         playerConnection.service.priorityQueue.forEachIndexed { idx, it ->
                             it.shuffleIndex = idx
                         }
+                        playerConnection.updatePriorityQueue()
                     }
 
                     // NORMAL
@@ -770,6 +771,7 @@ fun BoxScope.QueueContent(
                             confirmValueChange = {
                                 mutableSongsPriority.remove(window)
                                 playerConnection.service.priorityQueue.remove(window)
+                                playerConnection.updatePriorityQueue()
                                 haptic.performHapticFeedback(HapticFeedbackType.Confirm)
                                 true
                             }
