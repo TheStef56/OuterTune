@@ -180,9 +180,12 @@ class PlayerConnection(
             }
 
             player.seekToPreviousMediaItem()
-            player.addMediaItem(player.currentMediaItemIndex + 1, next.toMediaItem())
-            player.seekToNextMediaItem()
-            ignoreTransitions = 2
+            queueBoard.value.getCurrentQueue()?.let {
+                queueBoard.value.addSongsToQueue(it, player.currentMediaItemIndex + 1, listOf(next))
+            }
+            player.seekToPreviousMediaItem()
+            player.seekToPreviousMediaItem()
+            ignoreTransitions = 3
         }
     }
 
@@ -201,12 +204,14 @@ class PlayerConnection(
         currentWindowIndex.value = player.getCurrentQueueIndex()
         updateCanSkipPreviousAndNext()
         val currentQueueId = queueBoard.value.getCurrentQueue()?.id
-        if (ignoreTransitions <= 0) {
-            if (lastQueueId.value == currentQueueId) {
-                playNextPrioritySong()
+        if (reason != Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED) {
+            if (ignoreTransitions <= 0) {
+                if (lastQueueId.value == currentQueueId) {
+                    playNextPrioritySong()
+                }
+            } else {
+                ignoreTransitions -= 1
             }
-        } else {
-            ignoreTransitions -= 1
         }
         lastQueueId.value = currentQueueId
     }
