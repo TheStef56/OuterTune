@@ -72,18 +72,17 @@ fun SwipeToQueueBox(
     snackbarHostState: SnackbarHostState? = null,
     content: @Composable BoxScope.() -> Unit,
 ) {
-    val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val playerConnection = LocalPlayerConnection.current
-    val songAddedToQueueString = stringResource(R.string.song_added_to_queue)
-    val songAddedToQueueEnd = stringResource(R.string.song_added_to_queue)
+    val songAddedToQueueString = stringResource(R.string.song_added_to_queue, item.mediaMetadata.title.toString())
+    val songAddedToQueueEnd = stringResource(R.string.song_added_to_queue,  item.mediaMetadata.title.toString())
 
     SwipeActionBox(
         firstAction = Pair(Icons.AutoMirrored.Rounded.PlaylistPlay, {
             playerConnection?.enqueueNext(item)
             coroutineScope.launch {
                 snackbarHostState?.showSnackbar(
-                    message =  songAddedToQueueString + item.mediaMetadata.title,
+                    message =  songAddedToQueueString,
                     withDismissAction = true,
                     duration = SnackbarDuration.Short
                 )
@@ -94,8 +93,7 @@ fun SwipeToQueueBox(
             coroutineScope.launch {
                 val job = launch {
                     snackbarHostState?.showSnackbar(
-                        message = songAddedToQueueEnd + item.mediaMetadata.title
-                        ,
+                        message = songAddedToQueueEnd,
                         withDismissAction = true,
                         duration = SnackbarDuration.Indefinite
                     )
