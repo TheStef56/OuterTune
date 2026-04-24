@@ -10,8 +10,6 @@
 package com.dd3boh.outertune.playback
 
 import android.util.Log
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
@@ -24,18 +22,17 @@ import androidx.media3.common.Player.STATE_ENDED
 import androidx.media3.common.Timeline
 import com.dd3boh.outertune.db.MusicDatabase
 import com.dd3boh.outertune.db.entities.LyricsEntity.Companion.uninitializedLyric
-import com.dd3boh.outertune.db.entities.PriorityQueueSongMap
 import com.dd3boh.outertune.extensions.currentMetadata
 import com.dd3boh.outertune.extensions.getCurrentQueueIndex
 import com.dd3boh.outertune.extensions.getQueueWindows
 import com.dd3boh.outertune.extensions.metadata
 import com.dd3boh.outertune.extensions.toMediaItem
-import com.dd3boh.outertune.models.MediaMetadata
 import com.dd3boh.outertune.playback.queues.Queue
 import com.dd3boh.outertune.utils.reportException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -182,14 +179,13 @@ class PlayerConnection(
         if (currentQueue != null && service.priorityQueue.isNotEmpty()) {
             val next = service.priorityQueue.removeAt(0)
             updatePriorityQueue()
-
-            ignoreTransitions = 3
-            player.seekToPreviousMediaItem()
-            queueBoard.value.getCurrentQueue()?.let {
-                queueBoard.value.addSongsToQueue(it, player.currentMediaItemIndex + 1, listOf(next))
+            scope.launch {
+                ignoreTransitions = 2
+                player.seekToPreviousMediaItem()
+                enqueueNext(next.toMediaItem())
+                delay(100)
+                player.seekToNextMediaItem()
             }
-            player.seekToPreviousMediaItem()
-            player.seekToPreviousMediaItem()
         }
     }
 
@@ -203,16 +199,16 @@ class PlayerConnection(
     }
 
     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-        mediaMetadata.value = mediaItem?.metadata
-        currentMediaItemIndex.value = player.currentMediaItemIndex
-        currentWindowIndex.value = player.getCurrentQueueIndex()
-        updateCanSkipPreviousAndNext()
         val currentQueueId = queueBoard.value.getCurrentQueue()?.id
         if (reason != Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED) {
             if (ignoreTransitions <= 0) {
                 if (lastQueueId.value == currentQueueId) {
                     playNextPrioritySong()
                 }
+                mediaMetadata.value = mediaItem?.metadata
+                currentMediaItemIndex.value = player.currentMediaItemIndex
+                currentWindowIndex.value = player.getCurrentQueueIndex()
+                updateCanSkipPreviousAndNext()
             } else {
                 ignoreTransitions -= 1
             }
