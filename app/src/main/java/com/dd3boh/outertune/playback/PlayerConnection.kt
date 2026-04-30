@@ -203,19 +203,18 @@ class PlayerConnection(
 
     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
         val currentQueueId = queueBoard.value.getCurrentQueue()?.id
+        val lastMediaItemIndex = currentMediaItemIndex.value
         mediaMetadata.value = mediaItem?.metadata
         currentMediaItemIndex.value = player.currentMediaItemIndex
         currentWindowIndex.value = player.getCurrentQueueIndex()
         updateCanSkipPreviousAndNext()
         if (reason != Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED) {
             if (ignoreTransitions <= 0) {
-                if (lastQueueId.value == currentQueueId) {
+                if (lastQueueId.value == currentQueueId && lastMediaItemIndex < currentMediaItemIndex.value) {
                     playNextPrioritySong()
                 }
             } else {
                 ignoreTransitions -= 1
-                canSkipPrevious.value = false
-                canSkipNext.value = false
             }
         }
         lastQueueId.value = currentQueueId

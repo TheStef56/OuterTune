@@ -373,6 +373,8 @@ fun BoxScope.QueueContent(
 
     // reorder
     var dragInfo by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    val spacers = 1
+
 
     val reorderableState = rememberReorderableLazyListState(
         lazyListState = lazySongsListState,
@@ -385,7 +387,6 @@ fun BoxScope.QueueContent(
 
         val fromIndex = from.index
         val toIndex = to.index
-        val spacers = 1
 
         dragInfo = if (dragInfo == null) {
             fromIndex to toIndex
@@ -433,8 +434,8 @@ fun BoxScope.QueueContent(
 
                     // NORMAL
                     from >= prioritySize && to >= prioritySize -> {
-                        val adjustedFrom = from - prioritySize
-                        val adjustedTo = to - prioritySize
+                        val adjustedFrom = from - prioritySize - spacers
+                        val adjustedTo = to - prioritySize - spacers
 
                         qb.moveSong(adjustedFrom, adjustedTo)
                         playerConnection.player.moveMediaItem(adjustedFrom, adjustedTo)
