@@ -132,6 +132,7 @@ import com.dd3boh.outertune.playback.MusicService
 import com.dd3boh.outertune.playback.PlayerConnection
 import com.dd3boh.outertune.ui.component.rememberBottomSheetState
 import com.dd3boh.outertune.ui.component.shimmer.ShimmerTheme
+import com.dd3boh.outertune.ui.screens.ImportM3uScreen
 import com.dd3boh.outertune.ui.menu.BottomSheetMenu
 import com.dd3boh.outertune.ui.menu.MenuState
 import com.dd3boh.outertune.ui.player.BottomSheetPlayer
@@ -551,6 +552,12 @@ class MainActivity : ComponentActivity() {
                                     }
                                     composable("account") {
                                         AccountScreen(navController, scrollBehavior)
+                                    }
+                                    composable("library_manager/importM3u") {
+                                        ImportM3uScreen(
+                                            navController = navController,
+                                            scrollBehavior = scrollBehavior,
+                                        )
                                     }
 
                                     composable(

@@ -269,6 +269,7 @@ fun YouTubeSongMenu(
             navController = navController,
             songIds = null,
             onPreAdd = { playlist ->
+                if (playlist == null) return@AddToPlaylistDialog emptyList()
                 database.transaction {
                     insert(song.toMediaMetadata())
                 }

@@ -95,6 +95,7 @@ import com.dd3boh.outertune.db.MusicDatabase
 import com.dd3boh.outertune.db.entities.Event
 import com.dd3boh.outertune.db.entities.FormatEntity
 import com.dd3boh.outertune.db.entities.RelatedSongMap
+import com.dd3boh.outertune.db.entities.Song
 import com.dd3boh.outertune.di.AppModule.PlayerCache
 import com.dd3boh.outertune.di.DownloadCache
 import com.dd3boh.outertune.extensions.SilentHandler
@@ -547,27 +548,15 @@ class MusicService : MediaLibraryService(),
 
     fun enqueueEndPriority(items: List<MediaItem>) {
         scope.launch {
-            if (!qbInit.value) {
-
-                // when enqueuing next when player isn't active, play as a new song
+            queueBoard.value.getCurrentQueue()?.let {
+                val items = items.mapNotNull { it -> it.metadata}
                 if (items.isNotEmpty()) {
-                    playQueue(
-                        ListQueue(
-                            title = items.first().mediaMetadata.title.toString(),
-                            items = items.mapNotNull { it.metadata }
-                        )
-                    )
-                }
-            } else {
-                // enqueue next
-                queueBoard.value.getCurrentQueue()?.let {
-                    queueBoard.value.addSongsToQueue(it, player.currentMediaItemIndex + 1 + priorityQueueSize, items.mapNotNull { it.metadata })
+                    queueBoard.value.addSongsToQueue(it, player.currentMediaItemIndex + 1 + priorityQueueSize, items)
                     priorityQueueSize += 1
                     dataStore.edit { prefs ->
                         prefs[priorityQueueSizeKey] = priorityQueueSize
                     }
                 }
-
             }
         }
     }

@@ -58,6 +58,18 @@ We recycle translations from upstream, they are pulled periodically. -->
     <string name="filter_bookmarked">Bookmarked</string>
     <string name="no_results_found">No results found</string>
 
+    <!-- M3uImport -->
+    <string name="import_m3u">Import m3u</string>
+    <string name="filter_all_imported_songs">All ("%s")</string>
+    <string name="filter_imported">Imported ("%s")</string>
+    <string name="filter_missing">Missing ("%s")</string>
+    <string name="filter_mismatch">Mismatch ("%s")</string>
+    <string name="import_playlist_to_get_started">Import a playlist to get
+        started</string>
+    <string name="import_m3u_exit_confirm">Are you sure you want to exit?</string>
+    <string name="swap_song">Swap song</string>
+    <string name="delete_import">Remove import</string>
+
     <!-- Library -->
     <string name="library_song_empty">Library songs will show up here</string>
     <string name="library_artist_empty">Library artists will show up here</string>

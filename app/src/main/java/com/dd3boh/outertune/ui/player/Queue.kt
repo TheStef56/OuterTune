@@ -721,6 +721,7 @@ fun BoxScope.QueueContent(
                                         playerConnection.player.removeMediaItem(index)
                                         mutableSongs.removeAt(index)
                                         if (isPriority) {
+                                            Log.d("DIOCAN", "DIOCAN")
                                             playerConnection.service.priorityQueueSize = if (playerConnection.service.priorityQueueSize <= 0) 0 else playerConnection.service.priorityQueueSize - 1
                                             CoroutineScope(Dispatchers.IO).launch {
                                                 playerConnection.service.dataStore.edit { prefs ->
@@ -737,6 +738,7 @@ fun BoxScope.QueueContent(
                                     if (qb.removeCurrentQueueSong(index)) {
                                         playerConnection.player.removeMediaItem(index)
                                         mutableSongs.removeAt(index)
+                                        Log.d("DIOCAN1", "DIOCAN1")
                                         if (isPriority) {
                                             playerConnection.service.priorityQueueSize = if (playerConnection.service.priorityQueueSize <= 0) 0 else playerConnection.service.priorityQueueSize - 1
                                             CoroutineScope(Dispatchers.IO).launch {

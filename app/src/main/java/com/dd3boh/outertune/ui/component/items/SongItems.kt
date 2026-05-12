@@ -7,6 +7,7 @@
  */
 package com.dd3boh.outertune.ui.component.items
 
+import android.net.Uri
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -17,9 +18,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -71,6 +74,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import sh.calvin.reorderable.ReorderableCollectionItemScope
+import java.util.UUID
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -218,6 +223,148 @@ fun SongListItem(
     )
 }
 
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ReorderableCollectionItemScope.M3uSongListItem(
+    song: Song,
+    isMissing: Boolean,
+    inSelectMode: Boolean?,
+    isSelected: Boolean = false,
+    onSelectedChange: (Boolean) -> Unit,
+    onEditClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    ListItem(
+        title = song.song.title,
+        subtitle = joinByBullet(
+            (if (BuildConfig.DEBUG) song.song.id else ""),
+            Uri.decode(song.artists.joinToString { it.name }),
+            makeTimeString(song.song.duration * 1000L)
+        ),
+        badges = {
+            if (!isMissing) {
+                if (song.song.liked) {
+                    Icon.Favorite()
+                }
+                if (song.song.isLocal) {
+                    Icon.FolderCopy()
+                } else if (song.song.inLibrary != null) {
+                    Icon.Library()
+                }
+                if (!song.song.isLocal) {
+                    val downloads by LocalDownloadUtil.current.downloads.collectAsState()
+                    Icon.Download(downloads[song.id])
+                }
+            }
+        },
+        thumbnailContent = {
+            if (!isMissing) {
+                ItemThumbnail(
+                    thumbnailUrl = if (song.song.isLocal) song.song.localPath else song.song.thumbnailUrl,
+                    isActive = false,
+                    isPlaying = false,
+                    shape = RoundedCornerShape(ThumbnailCornerRadius),
+                    modifier = Modifier.size(ListThumbnailSize)
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = null,
+                    modifier = Modifier.size(ListThumbnailSize)
+                )
+            }
+        },
+        trailingContent = {
+            if (inSelectMode == true) {
+                Checkbox(
+                    checked = isSelected,
+                    onCheckedChange = onSelectedChange
+                )
+            } else {
+                IconButton(
+                    onClick = onEditClick
+                ) {
+                    Icon(
+                        Icons.Rounded.MoreVert,
+                        contentDescription = null
+                    )
+                }
+                IconButton(
+                    onClick = {},
+                    modifier = Modifier.draggableHandle()
+                ) {
+                    Icon(
+                        Icons.Rounded.DragHandle,
+                        contentDescription = null
+                    )
+                }
+            }
+        },
+        isSelected = false,
+        isActive = false,
+        modifier = modifier
+    )
+}
+
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun M3uSongSearchListItem(
+    song: Song,
+    onSearchResultClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    ListItem(
+        title = song.song.title,
+        subtitle = joinByBullet(
+            (if (BuildConfig.DEBUG) song.song.id else ""),
+            Uri.decode(song.artists.joinToString { it.name }),
+            makeTimeString(song.song.duration * 1000L)
+        ),
+        badges = {
+                if (song.song.liked) {
+                    Icon.Favorite()
+                }
+                if (song.song.isLocal) {
+                    Icon.FolderCopy()
+                } else if (song.song.inLibrary != null) {
+                    Icon.Library()
+                }
+                if (!song.song.isLocal) {
+                    val downloads by LocalDownloadUtil.current.downloads.collectAsState()
+                    Icon.Download(downloads[song.id])
+                }
+        },
+        thumbnailContent = {
+
+                ItemThumbnail(
+                    thumbnailUrl = if (song.song.isLocal) song.song.localPath else song.song.thumbnailUrl,
+                    isActive = false,
+                    isPlaying = false,
+                    shape = RoundedCornerShape(ThumbnailCornerRadius),
+                    modifier = Modifier.size(ListThumbnailSize)
+                )
+        },
+        trailingContent = {
+
+                IconButton(
+                    onClick = onSearchResultClick,
+                ) {
+                    Icon(
+                        Icons.Rounded.SwapHoriz,
+                        contentDescription = null
+                    )
+                }
+        },
+        isSelected = false,
+        isActive = false,
+        modifier = modifier
+    )
+}
+
+
+
 @Composable
 fun SongFolderItem(
     folderTitle: String,
@@ -336,7 +483,7 @@ fun SongGridItem(
                     .padding(end = 2.dp)
             )
         }
-        if (showDownloadIcon) {
+        if (showDownloadIcon && !song.song.isLocal) {
             val download by LocalDownloadUtil.current.getDownload(song.id).collectAsState(initial = null)
             Icon.Download(download)
         }

@@ -313,9 +313,10 @@ fun YouTubePlaylistMenu(
             navController = navController,
             songIds = null,
             onPreAdd = { targetPlaylist ->
+                if (targetPlaylist == null) return@AddToPlaylistDialog emptyList()
                 val allSongs = songs
                     .ifEmpty {
-                        YouTube.playlist(targetPlaylist.id).completed().getOrNull()?.songs.orEmpty()
+                        YouTube.playlist(targetPlaylist!!.id).completed().getOrNull()?.songs.orEmpty()
                     }.map {
                         it.toMediaMetadata()
                     }
@@ -323,8 +324,8 @@ fun YouTubePlaylistMenu(
                     allSongs.forEach(::insert)
                 }
 
-                targetPlaylist.playlist.browseId?.let { playlistId ->
-                    YouTube.addPlaylistToPlaylist(playlistId, targetPlaylist.id)
+                targetPlaylist!!.playlist.browseId?.let { playlistId ->
+                    YouTube.addPlaylistToPlaylist(playlistId, targetPlaylist!!.id)
                 }
 
                 allSongs.map { it.id }
