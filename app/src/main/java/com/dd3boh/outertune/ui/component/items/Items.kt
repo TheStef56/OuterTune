@@ -123,6 +123,7 @@ inline fun ListItem(
     trailingContent: @Composable RowScope.() -> Unit = {},
     isSelected: Boolean? = false,
     isActive: Boolean = false,
+    isPriority: Boolean = false,
     isAvailable: Boolean = true,
 ) {
     Row(
@@ -143,6 +144,11 @@ inline fun ListItem(
                 .padding(horizontal = 8.dp)
                 .clip(RoundedCornerShape(8.dp))
                 .background(color = MaterialTheme.colorScheme.inversePrimary.copy(alpha = 0.4f))
+        } else if (isPriority) {
+            modifier
+                .background(
+                    color =  MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
+                )
         } else {
             modifier // default
                 .height(ListItemHeight)
@@ -211,6 +217,7 @@ fun ListItem(
     trailingContent: @Composable RowScope.() -> Unit = {},
     isSelected: Boolean? = false,
     isActive: Boolean = false,
+    isPriority: Boolean = false
 ) = ListItem(
     title = title,
     subtitle = {
@@ -230,7 +237,8 @@ fun ListItem(
     trailingContent = trailingContent,
     modifier = modifier,
     isSelected = isSelected,
-    isActive = isActive
+    isActive = isActive,
+    isPriority = isPriority
 )
 
 @Composable
@@ -324,6 +332,7 @@ fun MediaMetadataListItem(
     isActive: Boolean = false,
     isSelected: Boolean? = false,
     isPlaying: Boolean = false,
+    isPriority: Boolean = false,
     showLikedIcon: Boolean = true,
     showInLibraryIcon: Boolean = true,
     showDownloadIcon: Boolean = true,
@@ -363,6 +372,7 @@ fun MediaMetadataListItem(
     modifier = modifier,
     isSelected = isSelected,
     isActive = isActive,
+    isPriority = isPriority
 )
 
 @Composable

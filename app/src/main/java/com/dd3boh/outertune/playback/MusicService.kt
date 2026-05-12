@@ -90,6 +90,7 @@ import com.dd3boh.outertune.constants.SkipOnErrorKey
 import com.dd3boh.outertune.constants.SkipSilenceKey
 import com.dd3boh.outertune.constants.StopMusicOnTaskClearKey
 import com.dd3boh.outertune.constants.minPlaybackDurKey
+import com.dd3boh.outertune.constants.priorityQueueSizeKey
 import com.dd3boh.outertune.db.MusicDatabase
 import com.dd3boh.outertune.db.entities.Event
 import com.dd3boh.outertune.db.entities.FormatEntity
@@ -181,6 +182,7 @@ class MusicService : MediaLibraryService(),
     val qbInit = MutableStateFlow(false)
     var queueBoard = MutableStateFlow(QueueBoard(this, maxQueues = 1))
     var queuePlaylistId: String? = null
+    var priorityQueueSize = dataStore.get(priorityQueueSizeKey, 0)
 
     @Inject
     @PlayerCache
@@ -539,6 +541,33 @@ class MusicService : MediaLibraryService(),
                 queueBoard.value.getCurrentQueue()?.let {
                     queueBoard.value.addSongsToQueue(it, player.currentMediaItemIndex + 1, items.mapNotNull { it.metadata })
                 }
+            }
+        }
+    }
+
+    fun enqueueEndPriority(items: List<MediaItem>) {
+        scope.launch {
+            if (!qbInit.value) {
+
+                // when enqueuing next when player isn't active, play as a new song
+                if (items.isNotEmpty()) {
+                    playQueue(
+                        ListQueue(
+                            title = items.first().mediaMetadata.title.toString(),
+                            items = items.mapNotNull { it.metadata }
+                        )
+                    )
+                }
+            } else {
+                // enqueue next
+                queueBoard.value.getCurrentQueue()?.let {
+                    queueBoard.value.addSongsToQueue(it, player.currentMediaItemIndex + 1 + priorityQueueSize, items.mapNotNull { it.metadata })
+                    priorityQueueSize += 1
+                    dataStore.edit { prefs ->
+                        prefs[priorityQueueSizeKey] = priorityQueueSize
+                    }
+                }
+
             }
         }
     }

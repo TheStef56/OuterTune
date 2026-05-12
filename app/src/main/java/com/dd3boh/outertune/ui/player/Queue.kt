@@ -106,6 +106,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastAny
+import androidx.datastore.preferences.core.edit
 import androidx.media3.common.Player.REPEAT_MODE_ALL
 import androidx.media3.common.Player.REPEAT_MODE_OFF
 import androidx.media3.common.Player.REPEAT_MODE_ONE
@@ -128,6 +129,7 @@ import com.dd3boh.outertune.constants.MiniPlayerHeight
 import com.dd3boh.outertune.constants.PlayerHorizontalPadding
 import com.dd3boh.outertune.constants.SeekIncrement
 import com.dd3boh.outertune.constants.SeekIncrementKey
+import com.dd3boh.outertune.constants.priorityQueueSizeKey
 import com.dd3boh.outertune.extensions.metadata
 import com.dd3boh.outertune.extensions.move
 import com.dd3boh.outertune.extensions.supportsWideScreen
@@ -146,11 +148,14 @@ import com.dd3boh.outertune.ui.component.button.ResizableIconButton
 import com.dd3boh.outertune.ui.component.items.MediaMetadataListItem
 import com.dd3boh.outertune.ui.menu.PlayerMenu
 import com.dd3boh.outertune.ui.menu.QueueMenu
+import com.dd3boh.outertune.utils.dataStore
 import com.dd3boh.outertune.utils.makeTimeString
 import com.dd3boh.outertune.utils.rememberEnumPreference
 import com.dd3boh.outertune.utils.rememberPreference
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
@@ -703,6 +708,8 @@ fun BoxScope.QueueContent(
                     state = reorderableState,
                     key = window.hashCode()
                 ) {
+                    val isPriority = index <= currentWindowIndex + playerConnection.service.priorityQueueSize && index > currentWindowIndex
+
                     val dismissState = rememberSwipeToDismissBoxState(
                         positionalThreshold = { totalDistance ->
                             totalDistance
@@ -713,6 +720,14 @@ fun BoxScope.QueueContent(
                                     if (qb.removeCurrentQueueSong(index)) {
                                         playerConnection.player.removeMediaItem(index)
                                         mutableSongs.removeAt(index)
+                                        if (isPriority) {
+                                            playerConnection.service.priorityQueueSize = if (playerConnection.service.priorityQueueSize <= 0) 0 else playerConnection.service.priorityQueueSize - 1
+                                            CoroutineScope(Dispatchers.IO).launch {
+                                                playerConnection.service.dataStore.edit { prefs ->
+                                                    prefs[priorityQueueSizeKey] = playerConnection.service.priorityQueueSize
+                                                }
+                                            }
+                                    }
                                     }
                                     haptic.performHapticFeedback(HapticFeedbackType.Confirm)
                                     return@rememberSwipeToDismissBoxState true
@@ -722,6 +737,14 @@ fun BoxScope.QueueContent(
                                     if (qb.removeCurrentQueueSong(index)) {
                                         playerConnection.player.removeMediaItem(index)
                                         mutableSongs.removeAt(index)
+                                        if (isPriority) {
+                                            playerConnection.service.priorityQueueSize = if (playerConnection.service.priorityQueueSize <= 0) 0 else playerConnection.service.priorityQueueSize - 1
+                                            CoroutineScope(Dispatchers.IO).launch {
+                                                playerConnection.service.dataStore.edit { prefs ->
+                                                    prefs[priorityQueueSizeKey] = playerConnection.service.priorityQueueSize
+                                                }
+                                            }
+                                        }
                                     }
                                     haptic.performHapticFeedback(HapticFeedbackType.Confirm)
                                     return@rememberSwipeToDismissBoxState true
@@ -748,6 +771,7 @@ fun BoxScope.QueueContent(
                             mediaMetadata = window,
                             isActive = (index == currentWindowIndex && !detachedHead) || index == detachedQueue?.getQueuePosShuffled(),
                             isPlaying = isPlaying && !detachedHead,
+                            isPriority = isPriority,
                             trailingContent = {
                                 if (inSelectMode) {
                                     Checkbox(
