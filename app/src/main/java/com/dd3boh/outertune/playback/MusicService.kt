@@ -90,7 +90,6 @@ import com.dd3boh.outertune.constants.SkipOnErrorKey
 import com.dd3boh.outertune.constants.SkipSilenceKey
 import com.dd3boh.outertune.constants.StopMusicOnTaskClearKey
 import com.dd3boh.outertune.constants.minPlaybackDurKey
-import com.dd3boh.outertune.constants.priorityQueueSizeKey
 import com.dd3boh.outertune.db.MusicDatabase
 import com.dd3boh.outertune.db.entities.Event
 import com.dd3boh.outertune.db.entities.FormatEntity
@@ -182,7 +181,6 @@ class MusicService : MediaLibraryService(),
     val qbInit = MutableStateFlow(false)
     var queueBoard = MutableStateFlow(QueueBoard(this, maxQueues = 1))
     var queuePlaylistId: String? = null
-    var priorityQueueSize = dataStore.get(priorityQueueSizeKey, 0)
 
     @Inject
     @PlayerCache
@@ -550,10 +548,12 @@ class MusicService : MediaLibraryService(),
             queueBoard.value.getCurrentQueue()?.let {
                 val items = items.mapNotNull { it -> it.metadata}
                 if (items.isNotEmpty()) {
-                    queueBoard.value.addSongsToQueue(it, player.currentMediaItemIndex + 1 + priorityQueueSize, items)
-                    priorityQueueSize += 1
-                    dataStore.edit { prefs ->
-                        prefs[priorityQueueSizeKey] = priorityQueueSize
+                    queueBoard.value.getCurrentQueue()?.let { it ->
+                        queueBoard.value.addSongsToQueue(it, player.currentMediaItemIndex + 1 + it.priorityQueueSize, items)
+                        it.priorityQueueSize += 1
+                        CoroutineScope(Dispatchers.IO).launch {
+                            database.saveQueue(it)
+                        }
                     }
                 }
             }
