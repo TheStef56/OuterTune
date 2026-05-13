@@ -72,10 +72,6 @@ val PlayerVolumeKey = floatPreferencesKey("playerVolume")
 val RepeatModeKey = intPreferencesKey("repeatMode")
 val LockQueueKey = booleanPreferencesKey("lockQueue")
 val minPlaybackDurKey = intPreferencesKey("minPlaybackDur")
-
-val priorityQueueSizeKey = intPreferencesKey("priorityQueueSize")
-
-
 /**
  * Lyrics
  */
