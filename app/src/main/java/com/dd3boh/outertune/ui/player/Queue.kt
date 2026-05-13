@@ -764,6 +764,7 @@ fun BoxScope.QueueContent(
                             mediaMetadata = window,
                             isActive = (index == currentWindowIndex && !detachedHead) || index == detachedQueue?.getQueuePosShuffled(),
                             isPlaying = isPlaying && !detachedHead,
+                            isPriority = isPriority,
                             trailingContent = {
                                 if (inSelectMode) {
                                     Checkbox(

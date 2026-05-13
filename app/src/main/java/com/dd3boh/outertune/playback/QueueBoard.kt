@@ -360,7 +360,7 @@ class QueueBoard(
         if (q.getQueuePosShuffled() >= listPos) {
             if (q.shuffled) {
                 // shuffle index current song + add size
-                val newIndex = player.currentMediaMetadata.value?.shuffleIndex
+                val newIndex = q.getQueuePosShuffled()
                 q.queuePos = q.queue.indexOf(q.queue.fastFirst { it.shuffleIndex == newIndex })
             } else {
                 q.queuePos += mediaList.size
@@ -562,6 +562,10 @@ class QueueBoard(
             saveQueueSongs(item)
         }
         bubbleUp(item)
+        item.priorityQueueSize = 0
+        CoroutineScope(Dispatchers.IO).launch {
+            player.database.saveQueue(item)
+        }
         return item.queuePos
     }
 

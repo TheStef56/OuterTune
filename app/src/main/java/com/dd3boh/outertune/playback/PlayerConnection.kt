@@ -133,6 +133,12 @@ class PlayerConnection(
         service.enqueueNext(items)
     }
 
+    fun enqueueEndPriority(item: MediaItem) = enqueueEndPriority(listOf(item))
+
+    fun enqueueEndPriority(items: List<MediaItem>) {
+        service.enqueueEndPriority(items)
+    }
+
     /**
      * Add item to end of current queue
      */

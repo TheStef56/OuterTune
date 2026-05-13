@@ -49,7 +49,8 @@ interface QueueDao {
                     queuePos = queue.queuePos,
                     lastSongPos = queue.lastSongPos,
                     index = queue.index,
-                    playlistId = queue.playlistId
+                    playlistId = queue.playlistId,
+                    priorityQueueSize = queue.priorityQueueSize
                 )
             )
         }
