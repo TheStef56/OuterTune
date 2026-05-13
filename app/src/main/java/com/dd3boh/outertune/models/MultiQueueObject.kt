@@ -24,6 +24,7 @@ data class MultiQueueObject(
      * Song id to start watch endpoint
      */
     var playlistId: String? = null,
+    var priorityQueueSize: Int = 0,
 ) {
 
     /**

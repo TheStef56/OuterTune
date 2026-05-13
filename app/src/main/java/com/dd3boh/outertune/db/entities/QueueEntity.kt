@@ -18,6 +18,8 @@ data class QueueEntity(
     @ColumnInfo(name = "index", defaultValue = 0.toString())
     val index: Int, // order of queue
     val playlistId: String? = null,
+    @ColumnInfo(name = "priorityQueueSize")
+    val priorityQueueSize: Int = 0,
 ) {
     companion object {
         fun generateQueueId() = RandomStringUtils.insecure().next(8, false, true).toLong()

@@ -22,7 +22,6 @@ import androidx.media3.common.Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM
 import androidx.media3.common.Player.REPEAT_MODE_OFF
 import androidx.media3.common.Player.STATE_ENDED
 import androidx.media3.common.Timeline
-import com.dd3boh.outertune.constants.priorityQueueSizeKey
 import com.dd3boh.outertune.db.MusicDatabase
 import com.dd3boh.outertune.db.entities.LyricsEntity.Companion.uninitializedLyric
 import com.dd3boh.outertune.extensions.currentMetadata
@@ -32,6 +31,8 @@ import com.dd3boh.outertune.extensions.metadata
 import com.dd3boh.outertune.playback.queues.Queue
 import com.dd3boh.outertune.utils.dataStore
 import com.dd3boh.outertune.utils.reportException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -171,14 +172,14 @@ class PlayerConnection(
     }
 
     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-        if (currentMediaItemIndex.value < player.currentMediaItemIndex) {
-            service.priorityQueueSize = if (service.priorityQueueSize <= 0) 0 else service.priorityQueueSize - 1
-        } else if (currentMediaItemIndex.value > player.currentMediaItemIndex && service.priorityQueueSize > 0) {
-            service.priorityQueueSize += 1
-        }
-        scope.launch {
-            service.dataStore.edit { prefs ->
-                prefs[priorityQueueSizeKey] = service.priorityQueueSize
+        queueBoard.value.getCurrentQueue()?.let { it ->
+            if (currentMediaItemIndex.value < player.currentMediaItemIndex) {
+                it.priorityQueueSize = if (it.priorityQueueSize <= 0) 0 else it.priorityQueueSize - 1
+            } else if (currentMediaItemIndex.value > player.currentMediaItemIndex && it.priorityQueueSize > 0) {
+                it.priorityQueueSize += 1
+            }
+            CoroutineScope(Dispatchers.IO).launch {
+                database.saveQueue(it)
             }
         }
         mediaMetadata.value = mediaItem?.metadata
