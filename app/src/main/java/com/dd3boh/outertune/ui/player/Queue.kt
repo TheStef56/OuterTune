@@ -391,12 +391,18 @@ fun BoxScope.QueueContent(
         mutableSongs.move(from.index, to.index)
     }
     LaunchedEffect(reorderableState.isAnyItemDragging) {
+        val currentPosShuffled = qb.getCurrentQueue()?.getQueuePosShuffled()
         if (!reorderableState.isAnyItemDragging) {
             dragInfo?.let { (from, to) ->
                 if (from == to) return@LaunchedEffect
                 qb.moveSong(from, to)
                 playerConnection.player.moveMediaItem(from, to)
                 dragInfo = null
+            }
+        }
+        qb.getCurrentQueue()?.let { q ->
+            if (q.shuffled){
+                q.queuePos = q.queue.indexOf(q.queue.fastFirst { it.shuffleIndex == currentPosShuffled })
             }
         }
     }
