@@ -107,6 +107,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastAny
+import androidx.compose.ui.util.fastFirst
 import androidx.media3.common.Player.REPEAT_MODE_ALL
 import androidx.media3.common.Player.REPEAT_MODE_OFF
 import androidx.media3.common.Player.REPEAT_MODE_ONE
@@ -720,6 +721,7 @@ fun BoxScope.QueueContent(
                             }
                             when (dismissValue) {
                                 SwipeToDismissBoxValue.StartToEnd -> {
+                                    val currentPosShuffled = qb.getCurrentQueue()?.getQueuePosShuffled()
                                     if (qb.removeCurrentQueueSong(index)) {
                                         playerConnection.player.removeMediaItem(index)
                                         mutableSongs.removeAt(index)
@@ -728,6 +730,11 @@ fun BoxScope.QueueContent(
                                             CoroutineScope(Dispatchers.IO).launch {
                                                 playerConnection.database.saveQueue(currentQueue as MultiQueueObject)
                                             }
+                                        }
+                                    }
+                                    qb.getCurrentQueue()?.let { q ->
+                                        if (q.shuffled){
+                                            q.queuePos = q.queue.indexOf(q.queue.fastFirst { it.shuffleIndex == currentPosShuffled })
                                         }
                                     }
                                     haptic.performHapticFeedback(HapticFeedbackType.Confirm)
@@ -735,6 +742,7 @@ fun BoxScope.QueueContent(
                                 }
 
                                 SwipeToDismissBoxValue.EndToStart -> {
+                                    val currentPosShuffled = qb.getCurrentQueue()?.getQueuePosShuffled()
                                     if (qb.removeCurrentQueueSong(index)) {
                                         playerConnection.player.removeMediaItem(index)
                                         mutableSongs.removeAt(index)
@@ -745,7 +753,11 @@ fun BoxScope.QueueContent(
                                             }
                                         }
                                     }
-
+                                    qb.getCurrentQueue()?.let { q ->
+                                        if (q.shuffled){
+                                            q.queuePos = q.queue.indexOf(q.queue.fastFirst { it.shuffleIndex == currentPosShuffled })
+                                        }
+                                    }
                                     haptic.performHapticFeedback(HapticFeedbackType.Confirm)
                                     return@rememberSwipeToDismissBoxState true
                                 }
