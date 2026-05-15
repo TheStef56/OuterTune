@@ -78,6 +78,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -106,7 +107,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastAny
-import androidx.compose.ui.util.fastFirst
 import androidx.media3.common.Player.REPEAT_MODE_ALL
 import androidx.media3.common.Player.REPEAT_MODE_OFF
 import androidx.media3.common.Player.REPEAT_MODE_ONE
@@ -150,9 +150,9 @@ import com.dd3boh.outertune.ui.menu.QueueMenu
 import com.dd3boh.outertune.utils.makeTimeString
 import com.dd3boh.outertune.utils.rememberEnumPreference
 import com.dd3boh.outertune.utils.rememberPreference
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
@@ -313,7 +313,7 @@ fun BoxScope.QueueContent(
     var detachedQueue by remember { mutableStateOf<MultiQueueObject?>(fallBackQueue) }
     val mutableQueues = remember { mutableStateListOf<MultiQueueObject>() }
     var playingQueue by remember { mutableIntStateOf(-1) }
-
+    var lastSwipe by remember { mutableDoubleStateOf(0.0) }
 
     /**
      * SONG LIST
@@ -453,7 +453,7 @@ fun BoxScope.QueueContent(
 
         mutableSongs.apply {
             clear()
-            addAll(queueWindows.mapIndexedNotNull { index, w -> w.mediaItem.metadata?.copy(composeUidWorkaround = index.toDouble()) })
+            addAll(queueWindows.mapIndexedNotNull { index, w -> w.mediaItem.metadata?.copy(composeUidWorkaround = Math.random()) })
         }
 
         if (currentWindowIndex != -1 && !isSearching) {
@@ -713,9 +713,13 @@ fun BoxScope.QueueContent(
                             totalDistance
                         },
                         confirmValueChange = { dismissValue ->
+                            if (window.composeUidWorkaround == lastSwipe){
+                                return@rememberSwipeToDismissBoxState (dismissValue != SwipeToDismissBoxValue.Settled)
+                            } else {
+                                lastSwipe = window.composeUidWorkaround
+                            }
                             when (dismissValue) {
                                 SwipeToDismissBoxValue.StartToEnd -> {
-                                    val currentPosShuffled = qb.getCurrentQueue()?.getQueuePosShuffled()
                                     if (qb.removeCurrentQueueSong(index)) {
                                         playerConnection.player.removeMediaItem(index)
                                         mutableSongs.removeAt(index)
@@ -724,18 +728,13 @@ fun BoxScope.QueueContent(
                                             CoroutineScope(Dispatchers.IO).launch {
                                                 playerConnection.database.saveQueue(currentQueue as MultiQueueObject)
                                             }
-                                        }
-                                    }
-                                    qb.getCurrentQueue()?.let { q ->
-                                        if (q.shuffled){
-                                            q.queuePos = q.queue.indexOf(q.queue.fastFirst { it.shuffleIndex == currentPosShuffled })
                                         }
                                     }
                                     haptic.performHapticFeedback(HapticFeedbackType.Confirm)
                                     return@rememberSwipeToDismissBoxState true
                                 }
+
                                 SwipeToDismissBoxValue.EndToStart -> {
-                                    val currentPosShuffled = qb.getCurrentQueue()?.getQueuePosShuffled()
                                     if (qb.removeCurrentQueueSong(index)) {
                                         playerConnection.player.removeMediaItem(index)
                                         mutableSongs.removeAt(index)
@@ -746,11 +745,7 @@ fun BoxScope.QueueContent(
                                             }
                                         }
                                     }
-                                    qb.getCurrentQueue()?.let { q ->
-                                        if (q.shuffled){
-                                            q.queuePos = q.queue.indexOf(q.queue.fastFirst { it.shuffleIndex == currentPosShuffled })
-                                        }
-                                    }
+
                                     haptic.performHapticFeedback(HapticFeedbackType.Confirm)
                                     return@rememberSwipeToDismissBoxState true
                                 }
