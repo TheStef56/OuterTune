@@ -8,7 +8,12 @@ buildscript {
     repositories {
         google()
         mavenCentral()
-        maven { setUrl("https://jitpack.io") }
+        maven {
+            setUrl("https://jitpack.io")
+            content {
+                includeGroup("com.github.MetrolistGroup.innertubex")
+            }
+        }
     }
     dependencies {
         classpath(libs.gradle)

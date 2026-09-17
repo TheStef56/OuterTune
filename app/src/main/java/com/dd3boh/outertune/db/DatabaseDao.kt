@@ -37,12 +37,12 @@ import com.dd3boh.outertune.extensions.toSQLiteQuery
 import com.dd3boh.outertune.models.MediaMetadata
 import com.dd3boh.outertune.models.MultiQueueObject
 import com.dd3boh.outertune.models.toMediaMetadata
-import com.zionhuang.innertube.models.AlbumItem
-import com.zionhuang.innertube.models.ArtistItem
-import com.zionhuang.innertube.models.PlaylistItem
-import com.zionhuang.innertube.models.SongItem
-import com.zionhuang.innertube.models.YTItem
-import com.zionhuang.innertube.pages.AlbumPage
+import com.metrolist.innertube.models.AlbumItem
+import com.metrolist.innertube.models.ArtistItem
+import com.metrolist.innertube.models.PlaylistItem
+import com.metrolist.innertube.models.SongItem
+import com.metrolist.innertube.models.YTItem
+import com.metrolist.innertube.pages.AlbumPage
 import kotlinx.coroutines.flow.Flow
 
 @Dao
