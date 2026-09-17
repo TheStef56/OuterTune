@@ -51,7 +51,7 @@ import com.dd3boh.outertune.ui.screens.settings.fragments.AccountFrag
 import com.dd3boh.outertune.ui.utils.backToMain
 import com.dd3boh.outertune.utils.rememberPreference
 import com.dd3boh.outertune.viewmodels.AccountViewModel
-import com.zionhuang.innertube.utils.parseCookieString
+import com.metrolist.innertube.utils.parseCookieString
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable

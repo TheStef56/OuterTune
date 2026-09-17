@@ -1,7 +1,7 @@
 package com.dd3boh.outertune.lyrics
 
 import android.content.Context
-import com.zionhuang.innertube.YouTube
+import com.metrolist.innertube.YouTube
 
 object YouTubeSubtitleLyricsProvider : LyricsProvider {
     override val name = "YouTube Subtitle"

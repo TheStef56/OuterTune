@@ -44,8 +44,8 @@ import com.dd3boh.outertune.ui.component.SwitchPreference
 import com.dd3boh.outertune.ui.dialog.InfoLabel
 import com.dd3boh.outertune.ui.dialog.TextFieldDialog
 import com.dd3boh.outertune.utils.rememberPreference
-import com.zionhuang.innertube.YouTube
-import com.zionhuang.innertube.utils.parseCookieString
+import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.utils.parseCookieString
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

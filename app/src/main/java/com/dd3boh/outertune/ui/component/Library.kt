@@ -36,8 +36,8 @@ import com.dd3boh.outertune.ui.menu.ArtistMenu
 import com.dd3boh.outertune.ui.menu.MenuState
 import com.dd3boh.outertune.ui.menu.PlaylistMenu
 import com.dd3boh.outertune.ui.menu.YouTubePlaylistMenu
-import com.zionhuang.innertube.models.PlaylistItem
-import com.zionhuang.innertube.models.WatchEndpoint
+import com.metrolist.innertube.models.PlaylistItem
+import com.metrolist.innertube.models.WatchEndpoint
 import kotlinx.coroutines.CoroutineScope
 
 @Composable

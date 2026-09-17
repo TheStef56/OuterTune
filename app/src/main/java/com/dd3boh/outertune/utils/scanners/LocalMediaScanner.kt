@@ -52,9 +52,9 @@ import com.dd3boh.outertune.utils.closestMatch
 import com.dd3boh.outertune.utils.dataStore
 import com.dd3boh.outertune.utils.lmScannerCoroutine
 import com.dd3boh.outertune.utils.reportException
-import com.zionhuang.innertube.YouTube
-import com.zionhuang.innertube.models.ArtistItem
-import com.zionhuang.innertube.models.SongItem
+import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.models.ArtistItem
+import com.metrolist.innertube.models.SongItem
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers

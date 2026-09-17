@@ -5,7 +5,7 @@ import com.dd3boh.outertune.db.entities.Song
 import com.dd3boh.outertune.db.entities.SongEntity
 import com.dd3boh.outertune.ui.utils.resize
 import com.dd3boh.outertune.utils.LocalArtworkPath
-import com.zionhuang.innertube.models.SongItem
+import com.metrolist.innertube.models.SongItem
 import java.io.Serializable
 import java.time.LocalDateTime
 import java.time.ZoneOffset

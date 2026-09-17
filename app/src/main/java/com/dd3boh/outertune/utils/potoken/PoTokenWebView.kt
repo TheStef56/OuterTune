@@ -11,7 +11,7 @@ import androidx.collection.ArrayMap
 import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewFeature
 import com.dd3boh.outertune.BuildConfig
-import com.zionhuang.innertube.YouTube
+import com.metrolist.innertube.YouTube
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope

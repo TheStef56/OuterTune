@@ -26,7 +26,7 @@ import com.dd3boh.outertune.db.entities.ArtistEntity
 import com.dd3boh.outertune.playback.queues.YouTubeQueue
 import com.dd3boh.outertune.ui.component.button.IconButton
 import com.dd3boh.outertune.ui.component.items.YouTubeListItem
-import com.zionhuang.innertube.models.ArtistItem
+import com.metrolist.innertube.models.ArtistItem
 
 @Composable
 fun YouTubeArtistMenu(

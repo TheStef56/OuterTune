@@ -5,9 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dd3boh.outertune.db.MusicDatabase
 import com.dd3boh.outertune.utils.reportException
-import com.zionhuang.innertube.YouTube
-import com.zionhuang.innertube.models.PlaylistItem
-import com.zionhuang.innertube.models.SongItem
+import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.models.PlaylistItem
+import com.metrolist.innertube.models.SongItem
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow

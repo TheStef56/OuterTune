@@ -108,10 +108,10 @@ import com.dd3boh.outertune.ui.utils.fadingEdge
 import com.dd3boh.outertune.ui.utils.resize
 import com.dd3boh.outertune.utils.rememberPreference
 import com.dd3boh.outertune.viewmodels.ArtistViewModel
-import com.zionhuang.innertube.models.AlbumItem
-import com.zionhuang.innertube.models.ArtistItem
-import com.zionhuang.innertube.models.PlaylistItem
-import com.zionhuang.innertube.models.SongItem
+import com.metrolist.innertube.models.AlbumItem
+import com.metrolist.innertube.models.ArtistItem
+import com.metrolist.innertube.models.PlaylistItem
+import com.metrolist.innertube.models.SongItem
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
@@ -497,6 +497,8 @@ fun ArtistScreen(
                                                         is PlaylistItem -> navController.navigate(
                                                             "online_playlist/${item.id}"
                                                         )
+
+                                                        else -> null
                                                     }
                                                 },
                                                 onLongClick = {
@@ -525,6 +527,8 @@ fun ArtistScreen(
                                                                 coroutineScope = coroutineScope,
                                                                 onDismiss = menuState::dismiss
                                                             )
+
+                                                            else -> null
                                                         }
                                                     }
                                                 }

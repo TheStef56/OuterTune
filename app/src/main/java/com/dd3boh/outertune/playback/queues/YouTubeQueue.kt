@@ -2,8 +2,8 @@ package com.dd3boh.outertune.playback.queues
 
 import com.dd3boh.outertune.models.MediaMetadata
 import com.dd3boh.outertune.models.toMediaMetadata
-import com.zionhuang.innertube.YouTube
-import com.zionhuang.innertube.models.WatchEndpoint
+import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.models.WatchEndpoint
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.withContext
 

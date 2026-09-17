@@ -47,9 +47,9 @@ import com.dd3boh.outertune.utils.LocalArtworkPathKeyer
 import com.dd3boh.outertune.utils.dataStore
 import com.dd3boh.outertune.utils.get
 import com.dd3boh.outertune.utils.reportException
-import com.zionhuang.innertube.YouTube
-import com.zionhuang.innertube.models.YouTubeLocale
-import com.zionhuang.kugou.KuGou
+import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.models.YouTubeLocale
+import com.metrolist.kugou.KuGou
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers

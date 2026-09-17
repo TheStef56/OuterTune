@@ -104,12 +104,12 @@ import com.dd3boh.outertune.ui.menu.YouTubeSongMenu
 import com.dd3boh.outertune.ui.utils.SnapLayoutInfoProvider
 import com.dd3boh.outertune.utils.rememberPreference
 import com.dd3boh.outertune.viewmodels.HomeViewModel
-import com.zionhuang.innertube.models.AlbumItem
-import com.zionhuang.innertube.models.ArtistItem
-import com.zionhuang.innertube.models.PlaylistItem
-import com.zionhuang.innertube.models.SongItem
-import com.zionhuang.innertube.models.WatchEndpoint
-import com.zionhuang.innertube.models.YTItem
+import com.metrolist.innertube.models.AlbumItem
+import com.metrolist.innertube.models.ArtistItem
+import com.metrolist.innertube.models.PlaylistItem
+import com.metrolist.innertube.models.SongItem
+import com.metrolist.innertube.models.WatchEndpoint
+import com.metrolist.innertube.models.YTItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -291,6 +291,7 @@ fun HomeScreen(
                             is AlbumItem -> navController.navigate("album/${item.id}")
                             is ArtistItem -> navController.navigate("artist/${item.id}")
                             is PlaylistItem -> navController.navigate("online_playlist/${item.id}")
+                            else -> null
                         }
                     },
                     onLongClick = {
@@ -320,6 +321,7 @@ fun HomeScreen(
                                     coroutineScope = scope,
                                     onDismiss = menuState::dismiss
                                 )
+                                else -> null
                             }
                         }
                     }
@@ -809,6 +811,8 @@ fun HomeScreen(
                         is PlaylistItem -> luckyItem.playEndpoint?.let {
                             playerConnection.playQueue(YouTubeQueue(it), isRadio = true)
                         }
+
+                        else -> null
                     }
                 }
             }

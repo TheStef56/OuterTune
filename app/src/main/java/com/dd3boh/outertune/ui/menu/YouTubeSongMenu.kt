@@ -58,8 +58,8 @@ import com.dd3boh.outertune.ui.dialog.ArtistDialog
 import com.dd3boh.outertune.utils.joinByBullet
 import com.dd3boh.outertune.utils.makeTimeString
 import com.dd3boh.outertune.utils.syncCoroutine
-import com.zionhuang.innertube.YouTube
-import com.zionhuang.innertube.models.SongItem
+import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.models.SongItem
 import kotlinx.coroutines.launch
 
 @Composable

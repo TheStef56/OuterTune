@@ -6,7 +6,7 @@ import androidx.media3.common.MediaMetadata.MEDIA_TYPE_MUSIC
 import com.dd3boh.outertune.db.entities.Song
 import com.dd3boh.outertune.models.MediaMetadata
 import com.dd3boh.outertune.models.toMediaMetadata
-import com.zionhuang.innertube.models.SongItem
+import com.metrolist.innertube.models.SongItem
 
 val MediaItem.metadata: MediaMetadata?
     get() = localConfiguration?.tag as? MediaMetadata

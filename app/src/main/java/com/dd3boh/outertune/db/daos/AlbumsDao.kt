@@ -21,7 +21,7 @@ import com.dd3boh.outertune.db.entities.ArtistEntity
 import com.dd3boh.outertune.db.entities.Song
 import com.dd3boh.outertune.db.entities.SongAlbumMap
 import com.dd3boh.outertune.extensions.reversed
-import com.zionhuang.innertube.models.AlbumItem
+import com.metrolist.innertube.models.AlbumItem
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 

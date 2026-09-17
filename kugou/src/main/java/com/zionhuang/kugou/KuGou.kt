@@ -1,9 +1,9 @@
-package com.zionhuang.kugou
+package com.metrolist.kugou
 
-import com.zionhuang.kugou.models.DownloadLyricsResponse
-import com.zionhuang.kugou.models.Keyword
-import com.zionhuang.kugou.models.SearchLyricsResponse
-import com.zionhuang.kugou.models.SearchSongResponse
+import com.metrolist.kugou.models.DownloadLyricsResponse
+import com.metrolist.kugou.models.Keyword
+import com.metrolist.kugou.models.SearchLyricsResponse
+import com.metrolist.kugou.models.SearchSongResponse
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.compression.ContentEncoding

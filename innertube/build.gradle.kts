@@ -35,6 +35,6 @@ dependencies {
     implementation(libs.ktor.client.encoding)
     implementation(libs.timber)
     testImplementation(libs.junit)
-
+    implementation(libs.newpipe.extractor)
     coreLibraryDesugaring(libs.desugaring)
 }

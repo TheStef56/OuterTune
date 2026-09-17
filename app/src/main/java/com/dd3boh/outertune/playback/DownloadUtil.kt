@@ -43,8 +43,8 @@ import com.dd3boh.outertune.utils.reportException
 import com.dd3boh.outertune.utils.scanners.InvalidAudioFileException
 import com.dd3boh.outertune.utils.scanners.fileFromUri
 import com.dd3boh.outertune.utils.scanners.uriListFromString
-import com.zionhuang.innertube.YouTube
-import com.zionhuang.innertube.models.SongItem
+import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.models.SongItem
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

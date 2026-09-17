@@ -17,13 +17,13 @@ import com.dd3boh.outertune.utils.YTPlayerUtils.STREAM_FALLBACK_CLIENTS
 import com.dd3boh.outertune.utils.YTPlayerUtils.validateStatus
 import com.dd3boh.outertune.utils.potoken.PoTokenGenerator
 import com.dd3boh.outertune.utils.potoken.PoTokenResult
-import com.zionhuang.innertube.NewPipeUtils
-import com.zionhuang.innertube.YouTube
-import com.zionhuang.innertube.models.YouTubeClient
-import com.zionhuang.innertube.models.YouTubeClient.Companion.ANDROID_VR_NO_AUTH
-import com.zionhuang.innertube.models.YouTubeClient.Companion.IOS
-import com.zionhuang.innertube.models.YouTubeClient.Companion.WEB_REMIX
-import com.zionhuang.innertube.models.response.PlayerResponse
+import com.metrolist.innertube.NewPipeUtils
+import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.models.YouTubeClient
+import com.metrolist.innertubex.models.YouTubeClient.Companion.IOS
+import com.metrolist.innertubex.models.YouTubeClient.Companion.WEB_REMIX
+import com.metrolist.innertube.models.response.PlayerResponse
+import com.metrolist.innertubex.models.YouTubeClient.Companion.ANDROID_VR_NO_AUTH
 import okhttp3.OkHttpClient
 
 object YTPlayerUtils {
@@ -41,8 +41,8 @@ object YTPlayerUtils {
      * Do not use other clients for this because it can result in inconsistent metadata.
      * For example other clients can have different normalization targets (loudnessDb).
      *
-     * [com.zionhuang.innertube.models.YouTubeClient.ANDROID_VR_NO_AUTH] Is temporally used as it is out only working client
-     * [com.zionhuang.innertube.models.YouTubeClient.WEB_REMIX] should be preferred here because currently it is the only client which provides:
+     * [com.metrolist.innertube.models.YouTubeClient.ANDROID_VR_NO_AUTH] Is temporally used as it is out only working client
+     * [com.metrolist.innertube.models.YouTubeClient.WEB_REMIX] should be preferred here because currently it is the only client which provides:
      * - the correct metadata (like loudnessDb)
      * - premium formats
      */

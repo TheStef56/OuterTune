@@ -69,8 +69,8 @@ import com.dd3boh.outertune.utils.getDownloadState
 import com.dd3boh.outertune.utils.lmScannerCoroutine
 import com.dd3boh.outertune.utils.reportException
 import com.dd3boh.outertune.utils.syncCoroutine
-import com.zionhuang.innertube.YouTube
-import com.zionhuang.innertube.models.WatchEndpoint
+import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.models.WatchEndpoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.io.IOException
