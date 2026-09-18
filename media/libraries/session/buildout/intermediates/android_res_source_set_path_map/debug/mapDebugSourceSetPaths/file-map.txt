@@ -1,0 +1,9 @@
+androidx.media3.session.lib-session-pngs-0 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\session\buildout\generated\res\pngs\debug
+androidx.media3.session.lib-session-updated_navigation_xml-1 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\session\buildout\generated\updated_navigation_xml\debug
+androidx.media3.session.lib-session-mergeDebugResources-2 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\session\buildout\intermediates\incremental\debug\mergeDebugResources\merged.dir
+androidx.media3.session.lib-session-mergeDebugResources-3 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\session\buildout\intermediates\incremental\debug\mergeDebugResources\stripped.dir
+androidx.media3.session.lib-session-debug-4 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\session\buildout\intermediates\merged_res\debug\mergeDebugResources
+androidx.media3.session.lib-session-debug-5 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\session\buildout\intermediates\packaged_res\debug\packageDebugResources
+androidx.media3.session.lib-session-debug-6 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\session\src\debug\res
+androidx.media3.session.lib-session-main-7 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\session\src\main\res
+gradleHome-0 C:\Users\stef\.gradle

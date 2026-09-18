@@ -1,0 +1,9 @@
+androidx.media3.exoplayer.lib-exoplayer-pngs-0 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\exoplayer\buildout\generated\res\pngs\debug
+androidx.media3.exoplayer.lib-exoplayer-updated_navigation_xml-1 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\exoplayer\buildout\generated\updated_navigation_xml\debug
+androidx.media3.exoplayer.lib-exoplayer-mergeDebugResources-2 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\exoplayer\buildout\intermediates\incremental\debug\mergeDebugResources\merged.dir
+androidx.media3.exoplayer.lib-exoplayer-mergeDebugResources-3 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\exoplayer\buildout\intermediates\incremental\debug\mergeDebugResources\stripped.dir
+androidx.media3.exoplayer.lib-exoplayer-debug-4 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\exoplayer\buildout\intermediates\merged_res\debug\mergeDebugResources
+androidx.media3.exoplayer.lib-exoplayer-debug-5 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\exoplayer\buildout\intermediates\packaged_res\debug\packageDebugResources
+androidx.media3.exoplayer.lib-exoplayer-debug-6 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\exoplayer\src\debug\res
+androidx.media3.exoplayer.lib-exoplayer-main-7 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\exoplayer\src\main\res
+gradleHome-0 C:\Users\stef\.gradle
