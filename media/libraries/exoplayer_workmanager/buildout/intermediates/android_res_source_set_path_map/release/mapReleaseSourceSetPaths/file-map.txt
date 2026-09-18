@@ -1,0 +1,9 @@
+androidx.media3.exoplayer.workmanager.lib-exoplayer-workmanager-pngs-0 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\exoplayer_workmanager\buildout\generated\res\pngs\release
+androidx.media3.exoplayer.workmanager.lib-exoplayer-workmanager-updated_navigation_xml-1 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\exoplayer_workmanager\buildout\generated\updated_navigation_xml\release
+androidx.media3.exoplayer.workmanager.lib-exoplayer-workmanager-mergeReleaseResources-2 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\exoplayer_workmanager\buildout\intermediates\incremental\release\mergeReleaseResources\merged.dir
+androidx.media3.exoplayer.workmanager.lib-exoplayer-workmanager-mergeReleaseResources-3 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\exoplayer_workmanager\buildout\intermediates\incremental\release\mergeReleaseResources\stripped.dir
+androidx.media3.exoplayer.workmanager.lib-exoplayer-workmanager-release-4 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\exoplayer_workmanager\buildout\intermediates\merged_res\release\mergeReleaseResources
+androidx.media3.exoplayer.workmanager.lib-exoplayer-workmanager-release-5 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\exoplayer_workmanager\buildout\intermediates\packaged_res\release\packageReleaseResources
+androidx.media3.exoplayer.workmanager.lib-exoplayer-workmanager-main-6 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\exoplayer_workmanager\src\main\res
+androidx.media3.exoplayer.workmanager.lib-exoplayer-workmanager-release-7 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\exoplayer_workmanager\src\release\res
+gradleHome-0 C:\Users\stef\.gradle

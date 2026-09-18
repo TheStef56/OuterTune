@@ -1,0 +1,15 @@
+-- Merging decision tree log ---
+manifest
+ADDED from C:\Users\stef\Desktop\prog\OuterTune\media\libraries\exoplayer_workmanager\src\main\AndroidManifest.xml:18:1-20:12
+INJECTED from C:\Users\stef\Desktop\prog\OuterTune\media\libraries\exoplayer_workmanager\src\main\AndroidManifest.xml:18:1-20:12
+	package
+		ADDED from C:\Users\stef\Desktop\prog\OuterTune\media\libraries\exoplayer_workmanager\src\main\AndroidManifest.xml:18:11-58
+		INJECTED from C:\Users\stef\Desktop\prog\OuterTune\media\libraries\exoplayer_workmanager\src\main\AndroidManifest.xml
+uses-sdk
+ADDED from C:\Users\stef\Desktop\prog\OuterTune\media\libraries\exoplayer_workmanager\src\main\AndroidManifest.xml:19:3-15
+INJECTED from C:\Users\stef\Desktop\prog\OuterTune\media\libraries\exoplayer_workmanager\src\main\AndroidManifest.xml:19:3-15
+INJECTED from C:\Users\stef\Desktop\prog\OuterTune\media\libraries\exoplayer_workmanager\src\main\AndroidManifest.xml:19:3-15
+	android:targetSdkVersion
+		INJECTED from C:\Users\stef\Desktop\prog\OuterTune\media\libraries\exoplayer_workmanager\src\main\AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from C:\Users\stef\Desktop\prog\OuterTune\media\libraries\exoplayer_workmanager\src\main\AndroidManifest.xml

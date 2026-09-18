@@ -1,0 +1,9 @@
+androidx.media3.decoder.lib-decoder-pngs-0 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\decoder\buildout\generated\res\pngs\release
+androidx.media3.decoder.lib-decoder-updated_navigation_xml-1 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\decoder\buildout\generated\updated_navigation_xml\release
+androidx.media3.decoder.lib-decoder-mergeReleaseResources-2 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\decoder\buildout\intermediates\incremental\release\mergeReleaseResources\merged.dir
+androidx.media3.decoder.lib-decoder-mergeReleaseResources-3 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\decoder\buildout\intermediates\incremental\release\mergeReleaseResources\stripped.dir
+androidx.media3.decoder.lib-decoder-release-4 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\decoder\buildout\intermediates\merged_res\release\mergeReleaseResources
+androidx.media3.decoder.lib-decoder-release-5 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\decoder\buildout\intermediates\packaged_res\release\packageReleaseResources
+androidx.media3.decoder.lib-decoder-main-6 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\decoder\src\main\res
+androidx.media3.decoder.lib-decoder-release-7 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\decoder\src\release\res
+gradleHome-0 C:\Users\stef\.gradle

@@ -1,0 +1,9 @@
+androidx.media3.common.lib-common-pngs-0 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\common\buildout\generated\res\pngs\release
+androidx.media3.common.lib-common-updated_navigation_xml-1 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\common\buildout\generated\updated_navigation_xml\release
+androidx.media3.common.lib-common-mergeReleaseResources-2 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\common\buildout\intermediates\incremental\release\mergeReleaseResources\merged.dir
+androidx.media3.common.lib-common-mergeReleaseResources-3 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\common\buildout\intermediates\incremental\release\mergeReleaseResources\stripped.dir
+androidx.media3.common.lib-common-release-4 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\common\buildout\intermediates\merged_res\release\mergeReleaseResources
+androidx.media3.common.lib-common-release-5 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\common\buildout\intermediates\packaged_res\release\packageReleaseResources
+androidx.media3.common.lib-common-main-6 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\common\src\main\res
+androidx.media3.common.lib-common-release-7 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\common\src\release\res
+gradleHome-0 C:\Users\stef\.gradle

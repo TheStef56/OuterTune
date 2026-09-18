@@ -1,0 +1,2 @@
+D androidx/media3/common/Rating$RatingType
+D androidx/media3/common/text/CustomSpanBundler$CustomSpanType

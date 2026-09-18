@@ -1,0 +1,9 @@
+androidx.media3.extractor.lib-extractor-pngs-0 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\extractor\buildout\generated\res\pngs\release
+androidx.media3.extractor.lib-extractor-updated_navigation_xml-1 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\extractor\buildout\generated\updated_navigation_xml\release
+androidx.media3.extractor.lib-extractor-mergeReleaseResources-2 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\extractor\buildout\intermediates\incremental\release\mergeReleaseResources\merged.dir
+androidx.media3.extractor.lib-extractor-mergeReleaseResources-3 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\extractor\buildout\intermediates\incremental\release\mergeReleaseResources\stripped.dir
+androidx.media3.extractor.lib-extractor-release-4 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\extractor\buildout\intermediates\merged_res\release\mergeReleaseResources
+androidx.media3.extractor.lib-extractor-release-5 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\extractor\buildout\intermediates\packaged_res\release\packageReleaseResources
+androidx.media3.extractor.lib-extractor-main-6 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\extractor\src\main\res
+androidx.media3.extractor.lib-extractor-release-7 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\extractor\src\release\res
+gradleHome-0 C:\Users\stef\.gradle

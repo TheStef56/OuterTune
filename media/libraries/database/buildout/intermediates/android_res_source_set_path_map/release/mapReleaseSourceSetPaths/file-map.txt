@@ -1,0 +1,9 @@
+androidx.media3.database.lib-database-pngs-0 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\database\buildout\generated\res\pngs\release
+androidx.media3.database.lib-database-updated_navigation_xml-1 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\database\buildout\generated\updated_navigation_xml\release
+androidx.media3.database.lib-database-mergeReleaseResources-2 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\database\buildout\intermediates\incremental\release\mergeReleaseResources\merged.dir
+androidx.media3.database.lib-database-mergeReleaseResources-3 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\database\buildout\intermediates\incremental\release\mergeReleaseResources\stripped.dir
+androidx.media3.database.lib-database-release-4 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\database\buildout\intermediates\merged_res\release\mergeReleaseResources
+androidx.media3.database.lib-database-release-5 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\database\buildout\intermediates\packaged_res\release\packageReleaseResources
+androidx.media3.database.lib-database-main-6 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\database\src\main\res
+androidx.media3.database.lib-database-release-7 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\database\src\release\res
+gradleHome-0 C:\Users\stef\.gradle

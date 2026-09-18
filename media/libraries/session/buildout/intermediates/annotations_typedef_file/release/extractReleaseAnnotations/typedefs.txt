@@ -1,0 +1,10 @@
+D androidx/media3/session/LibraryResult$ValueType
+D androidx/media3/session/MediaLibraryService$MediaLibrarySession$LibraryErrorReplicationMode
+D androidx/media3/session/SessionToken$SessionTokenImplType
+D androidx/media3/session/legacy/MediaBrowserCompat$MediaItem$Flags
+D androidx/media3/session/legacy/MediaBrowserServiceCompat$ResultFlags
+D androidx/media3/session/legacy/MediaMetadataCompat$BitmapKey
+D androidx/media3/session/legacy/MediaMetadataCompat$LongKey
+D androidx/media3/session/legacy/MediaMetadataCompat$RatingKey
+D androidx/media3/session/legacy/MediaMetadataCompat$TextKey
+D androidx/media3/session/legacy/MediaSessionCompat$SessionFlags
