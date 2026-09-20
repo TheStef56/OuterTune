@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import coil3.annotation.ExperimentalCoilApi
 import coil3.imageLoader
+import com.dd3boh.outertune.LocalDatabase
 import com.dd3boh.outertune.LocalDownloadUtil
 import com.dd3boh.outertune.LocalPlayerConnection
 import com.dd3boh.outertune.R
@@ -63,6 +64,7 @@ import com.dd3boh.outertune.constants.DownloadPathKey
 import com.dd3boh.outertune.constants.MaxImageCacheSizeKey
 import com.dd3boh.outertune.constants.MaxSongCacheSizeKey
 import com.dd3boh.outertune.constants.ScanPathsKey
+import com.dd3boh.outertune.constants.SongSortType
 import com.dd3boh.outertune.constants.ThumbnailCornerRadius
 import com.dd3boh.outertune.db.MusicDatabase
 import com.dd3boh.outertune.extensions.tryOrNull
@@ -141,6 +143,7 @@ fun ColumnScope.DownloadsFrag() {
     val coroutineScope = rememberCoroutineScope()
     val downloadCache = LocalPlayerConnection.current?.service?.downloadCache ?: return
     val downloadUtil = LocalDownloadUtil.current
+    val database = LocalDatabase.current
 
     val (downloadPath, onDownloadPathChange) = rememberPreference(DownloadPathKey, "")
     val (scanPaths, onScanPathsChange) = rememberPreference(ScanPathsKey, defaultValue = "")
@@ -476,11 +479,11 @@ fun ColumnScope.DownloadsFrag() {
 
                             // TODO: Delete external downloads. Rememebr to exclude extra paths
                             // clear external downloads
-//                            database.downloadSongs(SongSortType.NAME, true).collect { songs ->
-//                                songs.forEach { song ->
-//                                    downloadUtil.delete(song)
-//                                }
-//                            }
+                            database.downloadSongs(SongSortType.NAME, true).collect { songs ->
+                                songs.forEach { song ->
+                                    downloadUtil.delete(song)
+                                }
+                            }
 
                             downloadMainPathSize = downloadUtil.localMgr.getMainDlStorageUsage()
                             downloadExtraPathSize = downloadUtil.localMgr.getExtraDlStorageUsage()

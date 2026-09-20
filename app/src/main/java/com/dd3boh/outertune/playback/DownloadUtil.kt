@@ -208,7 +208,7 @@ class DownloadUtil @Inject constructor(
 
     private fun deleteSong(id: String): Boolean {
         val deleted = localMgr.deleteFile(id)
-        if (!deleted) return false
+//        if (!deleted) return false
         downloads.update { map ->
             map.toMutableMap().apply {
                 remove(id)
