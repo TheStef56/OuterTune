@@ -34,7 +34,7 @@ import com.dd3boh.outertune.LocalDatabase
 import com.dd3boh.outertune.R
 import com.dd3boh.outertune.db.entities.PlaylistEntity
 import com.dd3boh.outertune.extensions.isUserLoggedIn
-import com.zionhuang.innertube.YouTube
+import com.metrolist.innertube.YouTube
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime

@@ -1,5 +1,6 @@
 package com.dd3boh.outertune.ui.screens.playlist
 
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -22,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.FactCheck
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.MusicNote
@@ -119,12 +121,16 @@ import com.dd3boh.outertune.ui.component.items.SongListItem
 import com.dd3boh.outertune.ui.dialog.DefaultDialog
 import com.dd3boh.outertune.ui.utils.backToMain
 import com.dd3boh.outertune.ui.utils.getNSongsString
+import com.dd3boh.outertune.utils.YTPlayerUtils
 import com.dd3boh.outertune.utils.getDownloadState
 import com.dd3boh.outertune.utils.makeTimeString
 import com.dd3boh.outertune.utils.rememberEnumPreference
 import com.dd3boh.outertune.utils.rememberPreference
 import com.dd3boh.outertune.utils.syncCoroutine
 import com.dd3boh.outertune.viewmodels.AutoPlaylistViewModel
+import com.metrolist.innertube.models.response.PlayerResponse
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
@@ -470,6 +476,26 @@ fun AutoPlaylistScreen(
                                     ) {
                                         Icon(
                                             Icons.AutoMirrored.Rounded.QueueMusic,
+                                            contentDescription = null
+                                        )
+                                    }
+
+                                    IconButton(
+                                        onClick = {
+                                            // TODO: replace automatically unplayable videos (that do not exist anymore)
+                                            CoroutineScope(Dispatchers.IO).launch {
+                                                songs.forEachIndexed { index, song ->
+                                                    YTPlayerUtils.playerResponseForMetadata(song.id).let {
+                                                        Log.d("PLAYABILITY: (${song.title}) $index",
+                                                            it.getOrNull()?.playabilityStatus.toString()
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    ) {
+                                        Icon(
+                                            Icons.AutoMirrored.Rounded.FactCheck,
                                             contentDescription = null
                                         )
                                     }

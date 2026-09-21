@@ -484,6 +484,14 @@ val MIGRATION_16_17 = object : Migration(16, 17) {
     }
 }
 
+val MIGRATION_20_21 = object : Migration(20, 21) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "ALTER TABLE queue ADD COLUMN priorityQueueSize INTEGER NOT NULL DEFAULT 0"
+        )
+    }
+}
+
 @DeleteColumn.Entries(
     DeleteColumn(tableName = "song", columnName = "isTrash"),
     DeleteColumn(tableName = "playlist", columnName = "author"),
@@ -686,11 +694,3 @@ class Migration17To18 : AutoMigrationSpec
     DeleteColumn(tableName = "song", columnName = "totalPlayTime"),
 )
 class Migration19To20 : AutoMigrationSpec
-
-val MIGRATION_20_21 = object : Migration(20, 21) {
-    override fun migrate(db: SupportSQLiteDatabase) {
-        db.execSQL(
-            "ALTER TABLE queue ADD COLUMN priorityQueueSize INTEGER NOT NULL DEFAULT 0"
-        )
-    }
-}

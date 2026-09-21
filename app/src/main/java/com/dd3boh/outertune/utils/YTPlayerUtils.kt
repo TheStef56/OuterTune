@@ -17,13 +17,42 @@ import com.dd3boh.outertune.utils.YTPlayerUtils.STREAM_FALLBACK_CLIENTS
 import com.dd3boh.outertune.utils.YTPlayerUtils.validateStatus
 import com.dd3boh.outertune.utils.potoken.PoTokenGenerator
 import com.dd3boh.outertune.utils.potoken.PoTokenResult
-import com.zionhuang.innertube.NewPipeUtils
-import com.zionhuang.innertube.YouTube
-import com.zionhuang.innertube.models.YouTubeClient
-import com.zionhuang.innertube.models.YouTubeClient.Companion.ANDROID_VR_NO_AUTH
-import com.zionhuang.innertube.models.YouTubeClient.Companion.IOS
-import com.zionhuang.innertube.models.YouTubeClient.Companion.WEB_REMIX
-import com.zionhuang.innertube.models.response.PlayerResponse
+import com.metrolist.innertube.NewPipeUtils
+import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.models.YouTubeClient
+import com.metrolist.innertubex.models.YouTubeClient.Companion.IOS
+import com.metrolist.innertubex.models.YouTubeClient.Companion.WEB_REMIX
+import com.metrolist.innertube.models.response.PlayerResponse
+import com.metrolist.innertubex.models.YouTubeClient.Companion.ANDROID
+import com.metrolist.innertubex.models.YouTubeClient.Companion.ANDROID_VR_1_61_48
+import com.metrolist.innertubex.models.YouTubeClient.Companion.ANDROID_VR_1_65_10
+import com.metrolist.innertubex.models.YouTubeClient.Companion.ANDROID_VR_NO_AUTH
+import com.metrolist.innertubex.models.YouTubeClient.Companion.TVHTML5
+import com.metrolist.innertubex.models.YouTubeClient.Companion.TVHTML5_SIMPLY_EMBEDDED_PLAYER
+import com.metrolist.innertubex.models.YouTubeClient.Companion.VISIONOS
+import com.metrolist.innertubex.models.YouTubeClient.Companion.VISIONOS_0_1
+import com.metrolist.innertubex.models.YouTubeClient.Companion.WEB_CREATOR
+import com.metrolist.innertubex.models.YouTubeClient.Companion.ANDROID_VR_1_43_32
+import com.metrolist.innertubex.models.YouTubeClient.Companion.TVHTML5_SIMPLY
+import com.metrolist.innertubex.models.YouTubeClient.Companion.WEB
+import com.metrolist.innertubex.models.YouTubeClient.Companion.WEB_SAFARI
+import com.metrolist.innertubex.models.YouTubeClient.Companion.MWEB
+import com.metrolist.innertubex.models.YouTubeClient.Companion.WEB_EMBEDDED_PLAYER
+import com.metrolist.innertubex.models.YouTubeClient.Companion.IPADOS
+import com.metrolist.innertubex.models.YouTubeClient.Companion.WEB_KIDS
+import com.metrolist.innertubex.models.YouTubeClient.Companion.ANDROID_MUSIC
+import com.metrolist.innertubex.models.YouTubeClient.Companion.ANDROID_CREATOR
+import com.metrolist.innertubex.models.YouTubeClient.Companion.ANDROID_SABR
+import com.metrolist.innertubex.models.YouTubeClient.Companion.WEB_REMIX_SABR
+import com.metrolist.innertubex.models.YouTubeClient.Companion.ANDROID_VR_SABR
+import com.metrolist.innertubex.models.YouTubeClient.Companion.VISIONOS_SABR
+import com.metrolist.innertubex.models.YouTubeClient.Companion.TVHTML5_SIMPLY_SABR
+import com.metrolist.innertubex.models.YouTubeClient.Companion.WEB_SABR
+import com.metrolist.innertubex.models.YouTubeClient.Companion.WEB_SAFARI_SABR
+import com.metrolist.innertubex.models.YouTubeClient.Companion.MWEB_SABR
+import com.metrolist.innertubex.models.YouTubeClient.Companion.TVHTML5_SABR
+import com.metrolist.innertubex.models.YouTubeClient.Companion.IOS_SABR
+import com.metrolist.innertubex.models.YouTubeClient.Companion.TVHTML5_DOWNGRADED
 import okhttp3.OkHttpClient
 
 object YTPlayerUtils {
@@ -41,23 +70,50 @@ object YTPlayerUtils {
      * Do not use other clients for this because it can result in inconsistent metadata.
      * For example other clients can have different normalization targets (loudnessDb).
      *
-     * [com.zionhuang.innertube.models.YouTubeClient.ANDROID_VR_NO_AUTH] Is temporally used as it is out only working client
-     * [com.zionhuang.innertube.models.YouTubeClient.WEB_REMIX] should be preferred here because currently it is the only client which provides:
+     * [com.metrolist.innertube.models.YouTubeClient.ANDROID_VR_NO_AUTH] Is temporally used as it is out only working client
+     * [com.metrolist.innertube.models.YouTubeClient.WEB_REMIX] should be preferred here because currently it is the only client which provides:
      * - the correct metadata (like loudnessDb)
      * - premium formats
      */
-    private val MAIN_CLIENT: YouTubeClient = ANDROID_VR_NO_AUTH
+    private val MAIN_CLIENT: YouTubeClient = VISIONOS // it works for now
 
     /**
      * Clients used for fallback streams in case the streams of the main client do not work.
      */
     private val STREAM_FALLBACK_CLIENTS: Array<YouTubeClient> = arrayOf(
         // Could not parse deobfuscation function
-//        WEB_REMIX,
-//        ANDROID,
-//        TVHTML5,
-//        TVHTML5_SIMPLY_EMBEDDED_PLAYER,
-        IOS, // recent api changes produce error 403 after 30 seconds
+        VISIONOS,
+        WEB_REMIX,
+        WEB_CREATOR,
+        TVHTML5,
+        VISIONOS_0_1,
+        ANDROID_VR_1_65_10,
+        ANDROID_VR_NO_AUTH,
+        ANDROID_VR_1_61_48,
+        TVHTML5_SIMPLY_EMBEDDED_PLAYER,
+        IOS,
+        ANDROID,
+        ANDROID_VR_1_43_32,
+        TVHTML5_SIMPLY,
+        WEB,
+        WEB_SAFARI,
+        MWEB,
+        WEB_EMBEDDED_PLAYER,
+        IPADOS,
+        WEB_KIDS,
+        ANDROID_MUSIC,
+        ANDROID_CREATOR,
+        ANDROID_SABR,
+        WEB_REMIX_SABR,
+        ANDROID_VR_SABR,
+        VISIONOS_SABR,
+        TVHTML5_SIMPLY_SABR,
+        WEB_SABR,
+        WEB_SAFARI_SABR,
+        MWEB_SABR,
+        TVHTML5_SABR,
+        IOS_SABR,
+        TVHTML5_DOWNGRADED,
     )
 
 
@@ -69,6 +125,7 @@ object YTPlayerUtils {
         val streamUrl: String,
         val streamExpiresInSeconds: Int,
     )
+
 
     /**
      * Custom player response intended to use for playback.
@@ -225,7 +282,7 @@ object YTPlayerUtils {
         videoId: String,
         playlistId: String? = null,
     ): Result<PlayerResponse> =
-        YouTube.player(videoId, playlistId, client = WEB_REMIX) // ANDROID_VR does not work with history
+        YouTube.player(videoId, playlistId, client = MAIN_CLIENT) // ANDROID_VR does not work with history
 
     private fun findFormat(
         playerResponse: PlayerResponse,

@@ -8,7 +8,6 @@ import java.util.Properties
 
 plugins {
     id("com.android.application")
-    kotlin("android")
     alias(libs.plugins.hilt)
     alias(libs.plugins.kotlin.ksp)
     alias(libs.plugins.compose.compiler)
@@ -23,14 +22,14 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.dd3boh.outertune"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.dd3boh.outertune"
-        minSdk = 24
-        targetSdk = 36
+        minSdk = 26
+        targetSdk = 37
         versionCode = 71
-        versionName = "0.10.2-b1"
+        versionName = "0.11.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -107,15 +106,15 @@ android {
         }
     }
 
-    applicationVariants.all {
-        val variant = this
-        variant.outputs
-            .map { it as com.android.build.gradle.internal.api.BaseVariantOutputImpl }
-            .forEach { output ->
-                var outputFileName = "OuterTune-${variant.versionName}-${output.baseName}-${output.versionCode}.apk"
-                output.outputFileName = outputFileName
-            }
-    }
+//    applicationVariants.all {
+//        val variant = this
+//        variant.outputs
+//            .map { it as com.android.build.gradle.internal.api.BaseVariantOutputImpl }
+//            .forEach { output ->
+//                var outputFileName = "OuterTune-${variant.versionName}-${output.baseName}-${output.versionCode}.apk"
+//                output.outputFileName = outputFileName
+//            }
+//    }
 
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
@@ -264,6 +263,8 @@ dependencies {
     // sdk24 support
     // Support for N is officially unsupported even it the app should still work. Leave this outside of the version catalog.
     implementation("androidx.webkit:webkit:1.14.0")
+    implementation(libs.innertubex)
+
 }
 
 afterEvaluate {

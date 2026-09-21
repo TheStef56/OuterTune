@@ -8,8 +8,8 @@ import com.dd3boh.outertune.db.entities.Song
 import com.dd3boh.outertune.models.ItemsPage
 import com.dd3boh.outertune.ui.screens.ImportM3uFilter
 import com.dd3boh.outertune.utils.reportException
-import com.zionhuang.innertube.YouTube
-import com.zionhuang.innertube.models.SongItem
+import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.models.SongItem
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

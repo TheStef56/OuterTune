@@ -9,7 +9,7 @@ import com.dd3boh.outertune.constants.TabletUiKey
 import com.dd3boh.outertune.constants.YtmSyncKey
 import com.dd3boh.outertune.utils.dataStore
 import com.dd3boh.outertune.utils.get
-import com.zionhuang.innertube.utils.parseCookieString
+import com.metrolist.innertube.utils.parseCookieString
 
 fun Context.isAutoSyncEnabled(): Boolean {
     return dataStore.get(YtmSyncKey, true) && isUserLoggedIn()

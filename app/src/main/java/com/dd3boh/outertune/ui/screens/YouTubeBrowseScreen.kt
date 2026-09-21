@@ -40,10 +40,10 @@ import com.dd3boh.outertune.ui.menu.YouTubePlaylistMenu
 import com.dd3boh.outertune.ui.menu.YouTubeSongMenu
 import com.dd3boh.outertune.ui.utils.backToMain
 import com.dd3boh.outertune.viewmodels.YouTubeBrowseViewModel
-import com.zionhuang.innertube.models.AlbumItem
-import com.zionhuang.innertube.models.ArtistItem
-import com.zionhuang.innertube.models.PlaylistItem
-import com.zionhuang.innertube.models.SongItem
+import com.metrolist.innertube.models.AlbumItem
+import com.metrolist.innertube.models.ArtistItem
+import com.metrolist.innertube.models.PlaylistItem
+import com.metrolist.innertube.models.SongItem
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -119,6 +119,8 @@ fun YouTubeBrowseScreen(
                                             coroutineScope = coroutineScope,
                                             onDismiss = menuState::dismiss
                                         )
+
+                                        else -> null
                                     }
                                 }
                             }
@@ -146,6 +148,7 @@ fun YouTubeBrowseScreen(
                                 is AlbumItem -> navController.navigate("album/${item.id}")
                                 is ArtistItem -> navController.navigate("artist/${item.id}")
                                 is PlaylistItem -> navController.navigate("online_playlist/${item.id}")
+                                else -> null
                             }
                         }
                         .animateItem()

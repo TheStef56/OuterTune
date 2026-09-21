@@ -19,7 +19,7 @@ import com.dd3boh.outertune.db.entities.Song
 import com.dd3boh.outertune.db.entities.SongArtistMap
 import com.dd3boh.outertune.extensions.reversed
 import com.dd3boh.outertune.ui.utils.resize
-import com.zionhuang.innertube.pages.ArtistPage
+import com.metrolist.innertube.pages.ArtistPage
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.LocalDateTime

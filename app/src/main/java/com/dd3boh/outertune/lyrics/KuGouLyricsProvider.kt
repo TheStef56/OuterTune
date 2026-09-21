@@ -4,7 +4,7 @@ import android.content.Context
 import com.dd3boh.outertune.constants.EnableKugouKey
 import com.dd3boh.outertune.utils.dataStore
 import com.dd3boh.outertune.utils.get
-import com.zionhuang.kugou.KuGou
+import com.metrolist.kugou.KuGou
 
 object KuGouLyricsProvider : LyricsProvider {
     override val name = "Kugou"

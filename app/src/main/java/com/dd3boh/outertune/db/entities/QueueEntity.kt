@@ -18,7 +18,7 @@ data class QueueEntity(
     @ColumnInfo(name = "index", defaultValue = 0.toString())
     val index: Int, // order of queue
     val playlistId: String? = null,
-    @ColumnInfo(name = "priorityQueueSize")
+    @ColumnInfo(name = "priorityQueueSize", defaultValue = 0.toString())
     val priorityQueueSize: Int = 0,
 ) {
     companion object {

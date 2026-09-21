@@ -46,8 +46,8 @@ import com.dd3boh.outertune.ui.dialog.AddToQueueDialog
 import com.dd3boh.outertune.ui.dialog.ArtistDialog
 import com.dd3boh.outertune.utils.getDownloadState
 import com.dd3boh.outertune.utils.reportException
-import com.zionhuang.innertube.YouTube
-import com.zionhuang.innertube.models.AlbumItem
+import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.models.AlbumItem
 
 @Composable
 fun YouTubeAlbumMenu(

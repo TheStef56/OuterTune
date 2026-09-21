@@ -1,0 +1,21 @@
+<lint-module
+    format="1"
+    dir="C:\Users\stef\Desktop\prog\OuterTune\media\libraries\extractor"
+    name=":lib-extractor"
+    type="LIBRARY"
+    maven="androidx.media3:lib-extractor:unspecified"
+    agpVersion="9.4.0"
+    buildFolder="buildout"
+    bootClassPath="C:\Users\stef\AppData\Local\Android\Sdk\platforms\android-36\android.jar;C:\Users\stef\AppData\Local\Android\Sdk\build-tools\36.0.0\core-lambda-stubs.jar"
+    javaSourceLevel="1.8"
+    compileTarget="android-36"
+    neverShrinking="true"
+    highlightGradualR8Api="false">
+  <lintOptions
+      checkTestSources="true"
+      abortOnError="true"
+      absolutePaths="true"
+      checkReleaseBuilds="true"
+      explainIssues="true"/>
+  <variant name="release"/>
+</lint-module>

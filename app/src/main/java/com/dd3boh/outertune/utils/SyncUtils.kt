@@ -35,12 +35,12 @@ import com.dd3boh.outertune.extensions.isInternetConnected
 import com.dd3boh.outertune.extensions.toEnum
 import com.dd3boh.outertune.models.toMediaMetadata
 import com.dd3boh.outertune.playback.DownloadUtil
-import com.zionhuang.innertube.YouTube
-import com.zionhuang.innertube.models.AlbumItem
-import com.zionhuang.innertube.models.ArtistItem
-import com.zionhuang.innertube.models.PlaylistItem
-import com.zionhuang.innertube.models.SongItem
-import com.zionhuang.innertube.utils.completed
+import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.models.AlbumItem
+import com.metrolist.innertube.models.ArtistItem
+import com.metrolist.innertube.models.PlaylistItem
+import com.metrolist.innertube.models.SongItem
+import com.metrolist.innertube.utils.completed
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -596,17 +596,18 @@ class SyncUtils @Inject constructor(
 
         try {
             Log.i(TAG, "Recent activity synchronization started")
-            YouTube.libraryRecentActivity().onSuccess { page ->
-                val recentActivity = page.items.take(9).drop(1)
-
-                runBlocking {
-                    launch(Dispatchers.IO) {
-                        database.clearRecentActivity()
-
-                        recentActivity.reversed().forEach { database.insertRecentActivityItem(it) }
-                    }
-                }
-            }
+            // TODO: investigate
+//            YouTube.libraryRecentActivity().onSuccess { page ->
+//                val recentActivity = page.items.take(9).drop(1)
+//
+//                runBlocking {
+//                    launch(Dispatchers.IO) {
+//                        database.clearRecentActivity()
+//
+//                        recentActivity.reversed().forEach { database.insertRecentActivityItem(it) }
+//                    }
+//                }
+//            }
         } finally {
             context.dataStore.edit { settings ->
                 settings[LastRecentActivitySyncKey] = LocalDateTime.now().toEpochSecond(ZoneOffset.UTC)

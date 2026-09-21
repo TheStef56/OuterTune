@@ -62,17 +62,17 @@ import com.dd3boh.outertune.ui.menu.YouTubePlaylistMenu
 import com.dd3boh.outertune.ui.menu.YouTubeSongMenu
 import com.dd3boh.outertune.utils.rememberPreference
 import com.dd3boh.outertune.viewmodels.OnlineSearchViewModel
-import com.zionhuang.innertube.YouTube.SearchFilter.Companion.FILTER_ALBUM
-import com.zionhuang.innertube.YouTube.SearchFilter.Companion.FILTER_ARTIST
-import com.zionhuang.innertube.YouTube.SearchFilter.Companion.FILTER_COMMUNITY_PLAYLIST
-import com.zionhuang.innertube.YouTube.SearchFilter.Companion.FILTER_FEATURED_PLAYLIST
-import com.zionhuang.innertube.YouTube.SearchFilter.Companion.FILTER_SONG
-import com.zionhuang.innertube.YouTube.SearchFilter.Companion.FILTER_VIDEO
-import com.zionhuang.innertube.models.AlbumItem
-import com.zionhuang.innertube.models.ArtistItem
-import com.zionhuang.innertube.models.PlaylistItem
-import com.zionhuang.innertube.models.SongItem
-import com.zionhuang.innertube.models.YTItem
+import com.metrolist.innertube.YouTube.SearchFilter.Companion.FILTER_ALBUM
+import com.metrolist.innertube.YouTube.SearchFilter.Companion.FILTER_ARTIST
+import com.metrolist.innertube.YouTube.SearchFilter.Companion.FILTER_COMMUNITY_PLAYLIST
+import com.metrolist.innertube.YouTube.SearchFilter.Companion.FILTER_FEATURED_PLAYLIST
+import com.metrolist.innertube.YouTube.SearchFilter.Companion.FILTER_SONG
+import com.metrolist.innertube.YouTube.SearchFilter.Companion.FILTER_VIDEO
+import com.metrolist.innertube.models.AlbumItem
+import com.metrolist.innertube.models.ArtistItem
+import com.metrolist.innertube.models.PlaylistItem
+import com.metrolist.innertube.models.SongItem
+import com.metrolist.innertube.models.YTItem
 import kotlinx.coroutines.launch
 import java.net.URLDecoder
 
@@ -153,6 +153,8 @@ fun OnlineSearchResult(
                                             coroutineScope = coroutineScope,
                                             onDismiss = menuState::dismiss
                                         )
+
+                                        else -> null
                                     }
                                 }
                             }
@@ -192,6 +194,7 @@ fun OnlineSearchResult(
                                     is AlbumItem -> navController.navigate("album/${item.id}")
                                     is ArtistItem -> navController.navigate("artist/${item.id}")
                                     is PlaylistItem -> navController.navigate("online_playlist/${item.id}")
+                                    else -> null
                                 }
                             },
                             onLongClick = {

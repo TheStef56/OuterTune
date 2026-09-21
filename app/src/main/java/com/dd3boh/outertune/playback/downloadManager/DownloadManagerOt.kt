@@ -14,7 +14,7 @@ import java.io.InputStream
 
 
 sealed class DownloadEvent {
-    data class Progress(val mediaId: String, val bytesRead: Long, val contentLength: Long) : DownloadEvent()
+    data class Progress(val mediaId: String, val bytesRead: Long, val contentLength: Long?) : DownloadEvent()
     data class Success(val mediaId: String, val file: Uri) : DownloadEvent()
     data class Failure(val mediaId: String, val error: Throwable) : DownloadEvent()
 }
@@ -48,32 +48,42 @@ class DownloadManagerOt(
                         throw IllegalStateException("HTTP ${resp.code}")
                     }
                     val body = resp.body
-                    val total = body.contentLength()
+                    val total = body?.contentLength()
                     var downloaded = 0L
 
                     // wrap the source to track progress
-                    val source = body.byteStream()
+                    val source = body?.byteStream()
                     val countingStream = object : InputStream() {
                         override fun read(): Int {
-                            val byte = source.read()
-                            if (byte >= 0) {
-                                downloaded++
-                                _events.tryEmit(DownloadEvent.Progress(mediaId, downloaded, total))
+                            var byte = source?.read()
+                            if (byte != null) {
+                                if (byte >= 0) {
+                                    downloaded++
+                                    _events.tryEmit(DownloadEvent.Progress(mediaId, downloaded, total))
+                                }
+                            }
+                            if (byte == null) {
+                                byte = 0
                             }
                             return byte
                         }
 
                         override fun read(b: ByteArray, off: Int, len: Int): Int {
-                            val count = source.read(b, off, len)
-                            if (count > 0) {
-                                downloaded += count
-                                _events.tryEmit(DownloadEvent.Progress(mediaId, downloaded, total))
+                            var count = source?.read(b, off, len)
+                            if (count != null) {
+                                if (count > 0) {
+                                    downloaded += count
+                                    _events.tryEmit(DownloadEvent.Progress(mediaId, downloaded, total))
+                                }
+                            }
+                            if (count == null) {
+                                count = 0
                             }
                             return count
                         }
 
                         override fun close() {
-                            source.close()
+                            source?.close()
                         }
                     }
 

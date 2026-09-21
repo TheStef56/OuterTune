@@ -1,0 +1,9 @@
+androidx.media3.datasource.okhttp.lib-datasource-okhttp-pngs-0 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\datasource_okhttp\buildout\generated\res\pngs\debug
+androidx.media3.datasource.okhttp.lib-datasource-okhttp-updated_navigation_xml-1 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\datasource_okhttp\buildout\generated\updated_navigation_xml\debug
+androidx.media3.datasource.okhttp.lib-datasource-okhttp-mergeDebugResources-2 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\datasource_okhttp\buildout\intermediates\incremental\debug\mergeDebugResources\merged.dir
+androidx.media3.datasource.okhttp.lib-datasource-okhttp-mergeDebugResources-3 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\datasource_okhttp\buildout\intermediates\incremental\debug\mergeDebugResources\stripped.dir
+androidx.media3.datasource.okhttp.lib-datasource-okhttp-debug-4 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\datasource_okhttp\buildout\intermediates\merged_res\debug\mergeDebugResources
+androidx.media3.datasource.okhttp.lib-datasource-okhttp-debug-5 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\datasource_okhttp\buildout\intermediates\packaged_res\debug\packageDebugResources
+androidx.media3.datasource.okhttp.lib-datasource-okhttp-debug-6 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\datasource_okhttp\src\debug\res
+androidx.media3.datasource.okhttp.lib-datasource-okhttp-main-7 C:\Users\stef\Desktop\prog\OuterTune\media\libraries\datasource_okhttp\src\main\res
+gradleHome-0 C:\Users\stef\.gradle
