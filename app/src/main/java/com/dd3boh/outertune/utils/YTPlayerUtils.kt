@@ -282,7 +282,7 @@ object YTPlayerUtils {
         videoId: String,
         playlistId: String? = null,
     ): Result<PlayerResponse> =
-        YouTube.player(videoId, playlistId, client = WEB_REMIX) // ANDROID_VR does not work with history
+        YouTube.player(videoId, playlistId, client = MAIN_CLIENT) // ANDROID_VR does not work with history
 
     private fun findFormat(
         playerResponse: PlayerResponse,

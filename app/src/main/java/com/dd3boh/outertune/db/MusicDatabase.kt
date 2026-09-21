@@ -134,6 +134,7 @@ abstract class InternalDatabase : RoomDatabase() {
                     .addMigrations(MIGRATION_14_15)
                     .addMigrations(MIGRATION_15_16)
                     .addMigrations(MIGRATION_16_17)
+                    .addMigrations(MIGRATION_21_20)
                     .build()
             )
 
@@ -145,6 +146,7 @@ abstract class InternalDatabase : RoomDatabase() {
                     .addMigrations(MIGRATION_14_15)
                     .addMigrations(MIGRATION_15_16)
                     .addMigrations(MIGRATION_16_17)
+                    .addMigrations(MIGRATION_21_20)
                     .build()
             )
     }
@@ -479,6 +481,12 @@ val MIGRATION_16_17 = object : Migration(16, 17) {
                 )
             )
         }
+    }
+}
+
+val MIGRATION_21_20 = object : Migration(21, 20) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE queue DROP COLUMN priorityQueueSize")
     }
 }
 
