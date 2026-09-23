@@ -79,6 +79,7 @@ class UnavailableSongsViewModel @Inject constructor(
 }
 
 data class UnavailableSong(
+    val query: String,
     val song: Song,
     val uuid: String,
 )

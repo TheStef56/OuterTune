@@ -10,6 +10,7 @@ package com.dd3boh.outertune.ui.screens
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
@@ -362,6 +363,10 @@ fun UnavailableSongsScreen(
                                         replaceAllWithAutoSearch(
                                             viewModel = viewModel,
                                             database = database,
+                                            context = context,
+                                            onPercentageChange = {
+                                                percentage = it
+                                            },
                                             onLoadingChange = {
                                                 isLoading = it
                                             })
@@ -379,7 +384,7 @@ fun UnavailableSongsScreen(
                                 contentAlignment = Alignment.Center,
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .padding(top = if (viewModel.unavailableSongs.isEmpty()) 210.dp else 20.dp)
+                                    .padding(top = if (viewModel.unavailableSongs.isEmpty()) 210.dp else 0.dp)
                             ) {
                                 Box(
                                     contentAlignment = Alignment.Center,
@@ -436,8 +441,8 @@ fun UnavailableSongsScreen(
                         val songs = viewModel.unavailableSongs
                         itemsIndexed(
                             items = songs,
-                            key = { _, (_, uuid) -> uuid }
-                        ) { index, (song, uuid) ->
+                            key = { _, (_, _, uuid) -> uuid }
+                        ) { index, (query, song, uuid) ->
                             UnavailableSongListItem (
                                 song = song,
                                 isMissing = false,
@@ -458,8 +463,7 @@ fun UnavailableSongsScreen(
                                             navController = navController,
                                             unavailableSongsNavController = unavailableSongsNavController,
                                             onSwapClick = {
-                                                val queryText = "${song.song.title} ${Uri.decode(song.artists.joinToString(" ") {it.name})}"
-                                                onSearchQueryChange(TextFieldValue(queryText))
+                                                onSearchQueryChange(TextFieldValue(query))
                                             },
                                             onDismiss = menuState::dismiss
                                         )
@@ -468,8 +472,7 @@ fun UnavailableSongsScreen(
                                     haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
                                     onSearchQueryChange(
                                         TextFieldValue(
-                                            text = query.text,
-                                            selection = query.selection
+                                            text = query
                                         )
                                     )
                                 },
@@ -580,6 +583,7 @@ fun UnavailableSongsScreen(
                                                 val old = viewModel.unavailableSongs[toSwapIndex]
                                                 viewModel.unavailableSongs[toSwapIndex] =
                                                     UnavailableSong(
+                                                        query = old.query,
                                                         song = item,
                                                         uuid = old.uuid,
                                                     )
@@ -611,6 +615,7 @@ fun UnavailableSongsScreen(
                                                     database.update(newSong.song)
                                                 }
                                                 unavailableSongsNavController.navigate(Screens.UnavailableSongsList.route)
+                                                Toast.makeText(context, R.string.replaced_one_with_search, Toast.LENGTH_SHORT).show()
                                                 onSearchQueryChange(TextFieldValue())
                                             },
                                         )
@@ -675,6 +680,7 @@ fun UnavailableSongsScreen(
                                                 )
                                                 viewModel.unavailableSongs[toSwapIndex] =
                                                     UnavailableSong(
+                                                        query = old.query,
                                                         song = newSong,
                                                         uuid = old.uuid,
                                                     )
@@ -682,6 +688,7 @@ fun UnavailableSongsScreen(
                                             }
 
                                             unavailableSongsNavController.navigate(Screens.UnavailableSongsList.route)
+                                            Toast.makeText(context, R.string.replaced_one_with_search, Toast.LENGTH_SHORT).show()
                                             onSearchQueryChange(TextFieldValue())
                                         }
 
@@ -884,10 +891,14 @@ fun UnavailableSongsScreen(
 fun replaceAllWithAutoSearch(
     viewModel: UnavailableSongsViewModel,
     database: DatabaseDao,
-    onLoadingChange: (Boolean) -> Unit
+    context: Context,
+    onLoadingChange: (Boolean) -> Unit,
+    onPercentageChange: (Int) -> Unit
 ) {
-    CoroutineScope(Dispatchers.IO).launch {
+    CoroutineScope(Dispatchers.Main).launch {
+        onPercentageChange(0)
         onLoadingChange(true)
+        var count = 0
         viewModel.unavailableSongs.forEachIndexed { index, old ->
             val matches = mutableListOf<Song>()
             val queryText = "${old.song.title} ${Uri.decode(old.song.artists.joinToString(" ") {it.name})}"
@@ -956,13 +967,17 @@ fun replaceAllWithAutoSearch(
                 )
                 viewModel.unavailableSongs[index] =
                     UnavailableSong(
+                        query = old.query,
                         song = newSong,
                         uuid = old.uuid,
                     )
                 database.update(newSong.song)
             }
+            count+=1
+            onPercentageChange(count*100/viewModel.unavailableSongs.size)
         }
         onLoadingChange(false)
+        Toast.makeText(context, R.string.replaced_all_with_autosearch, Toast.LENGTH_SHORT).show()
     }
 }
 
@@ -986,7 +1001,8 @@ suspend fun scanForUnavailableSongs(
     val songsArray = songs.first()
     songsArray.forEachIndexed { index, song ->
         if (YTPlayerUtils.playerResponseForMetadata(song.id).getOrNull()?.playabilityStatus?.status == "UNPLAYABLE") {
-            unavailableSongs.add(UnavailableSong(song, UUID.randomUUID().toString()))
+            val query = "${song.title} ${Uri.decode(song.artists.joinToString(" ") {it.name})}"
+            unavailableSongs.add(UnavailableSong(query, song, UUID.randomUUID().toString()))
             Log.d("PLAYABILITY: ($index)", "ERROR")
         } else {
             Log.d("PLAYABILITY: ($index)", "OK")
