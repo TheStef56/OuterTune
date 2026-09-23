@@ -226,6 +226,136 @@ fun SongListItem(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
+fun UnavailableSongListItem(
+    song: Song,
+    isMissing: Boolean,
+    inSelectMode: Boolean?,
+    isSelected: Boolean = false,
+    onSelectedChange: (Boolean) -> Unit,
+    onEditClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    ListItem(
+        title = song.song.title,
+        subtitle = joinByBullet(
+            (if (BuildConfig.DEBUG) song.song.id else ""),
+            Uri.decode(song.artists.joinToString { it.name }),
+            makeTimeString(song.song.duration * 1000L)
+        ),
+        badges = {
+            if (!isMissing) {
+                if (song.song.liked) {
+                    Icon.Favorite()
+                }
+                if (song.song.isLocal) {
+                    Icon.FolderCopy()
+                } else if (song.song.inLibrary != null) {
+                    Icon.Library()
+                }
+                if (!song.song.isLocal) {
+                    val downloads by LocalDownloadUtil.current.downloads.collectAsState()
+                    Icon.Download(downloads[song.id])
+                }
+            }
+        },
+        thumbnailContent = {
+            if (!isMissing) {
+                ItemThumbnail(
+                    thumbnailUrl = if (song.song.isLocal) song.song.localPath else song.song.thumbnailUrl,
+                    isActive = false,
+                    isPlaying = false,
+                    shape = RoundedCornerShape(ThumbnailCornerRadius),
+                    modifier = Modifier.size(ListThumbnailSize)
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = null,
+                    modifier = Modifier.size(ListThumbnailSize)
+                )
+            }
+        },
+        trailingContent = {
+            if (inSelectMode == true) {
+                Checkbox(
+                    checked = isSelected,
+                    onCheckedChange = onSelectedChange
+                )
+            } else {
+                IconButton(
+                    onClick = onEditClick
+                ) {
+                    Icon(
+                        Icons.Rounded.MoreVert,
+                        contentDescription = null
+                    )
+                }
+            }
+        },
+        isSelected = false,
+        isActive = false,
+        modifier = modifier
+    )
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun UnavailableSongSearchListItem(
+    song: Song,
+    onSearchResultClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    ListItem(
+        title = song.song.title,
+        subtitle = joinByBullet(
+            (if (BuildConfig.DEBUG) song.song.id else ""),
+            Uri.decode(song.artists.joinToString { it.name }),
+            makeTimeString(song.song.duration * 1000L)
+        ),
+        badges = {
+            if (song.song.liked) {
+                Icon.Favorite()
+            }
+            if (song.song.isLocal) {
+                Icon.FolderCopy()
+            } else if (song.song.inLibrary != null) {
+                Icon.Library()
+            }
+            if (!song.song.isLocal) {
+                val downloads by LocalDownloadUtil.current.downloads.collectAsState()
+                Icon.Download(downloads[song.id])
+            }
+        },
+        thumbnailContent = {
+
+            ItemThumbnail(
+                thumbnailUrl = if (song.song.isLocal) song.song.localPath else song.song.thumbnailUrl,
+                isActive = false,
+                isPlaying = false,
+                shape = RoundedCornerShape(ThumbnailCornerRadius),
+                modifier = Modifier.size(ListThumbnailSize)
+            )
+        },
+        trailingContent = {
+
+            IconButton(
+                onClick = onSearchResultClick,
+            ) {
+                Icon(
+                    Icons.Rounded.SwapHoriz,
+                    contentDescription = null
+                )
+            }
+        },
+        isSelected = false,
+        isActive = false,
+        modifier = modifier
+    )
+}
+
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
 fun ReorderableCollectionItemScope.M3uSongListItem(
     song: Song,
     isMissing: Boolean,

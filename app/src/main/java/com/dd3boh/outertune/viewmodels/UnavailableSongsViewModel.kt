@@ -25,23 +25,21 @@ import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
-class ImportM3uViewModel @Inject constructor(
+class UnavailableSongsViewModel @Inject constructor(
     database: MusicDatabase,
 ): ViewModel() {
     val scope = CoroutineScope(Dispatchers.IO)
-    val importedSongs = mutableStateListOf<ImportedSong>()
+    val unavailableSongs = mutableStateListOf<UnavailableSong>()
     var onlineResult = MutableStateFlow<ItemsPage?>(null)
 
 
     val query = MutableStateFlow("")
-
 
     val localResult: Flow<List<Song>> = query.flatMapLatest { query ->
         if (query.isEmpty()) {
             flowOf(emptyList<Song>())
         } else {
             database.searchSongs(query)
-
         }
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
@@ -70,7 +68,7 @@ class ImportM3uViewModel @Inject constructor(
                 val searchResult =
                     YouTube.searchContinuation(continuation).getOrNull()
                         ?: return@launch
-                this@ImportM3uViewModel.onlineResult.value = ItemsPage(
+                this@UnavailableSongsViewModel.onlineResult.value = ItemsPage(
                     (viewState.items + searchResult.items).distinctBy { it.id },
                     searchResult.continuation
                 )
@@ -80,9 +78,7 @@ class ImportM3uViewModel @Inject constructor(
     }
 }
 
-data class ImportedSong(
-    val query:String,
+data class UnavailableSong(
     val song: Song,
     val uuid: String,
-    val status: ImportM3uFilter
 )

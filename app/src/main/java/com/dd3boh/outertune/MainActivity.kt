@@ -147,6 +147,7 @@ import com.dd3boh.outertune.ui.screens.PlayerScreen
 import com.dd3boh.outertune.ui.screens.Screens
 import com.dd3boh.outertune.ui.screens.SetupWizard
 import com.dd3boh.outertune.ui.screens.StatsScreen
+import com.dd3boh.outertune.ui.screens.UnavailableSongsScreen
 import com.dd3boh.outertune.ui.screens.YouTubeBrowseScreen
 import com.dd3boh.outertune.ui.screens.artist.ArtistAlbumsScreen
 import com.dd3boh.outertune.ui.screens.artist.ArtistItemsScreen
@@ -555,6 +556,12 @@ class MainActivity : ComponentActivity() {
                                     }
                                     composable("library_manager/importM3u") {
                                         ImportM3uScreen(
+                                            navController = navController,
+                                            scrollBehavior = scrollBehavior,
+                                        )
+                                    }
+                                    composable("library_manager/UnavailableSongs") {
+                                        UnavailableSongsScreen(
                                             navController = navController,
                                             scrollBehavior = scrollBehavior,
                                         )

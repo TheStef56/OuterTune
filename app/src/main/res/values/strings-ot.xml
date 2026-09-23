@@ -187,6 +187,7 @@ while also allowing users to translate our app as well. New, specific strings to
     <string name="local_library_enable_title">Enable local media</string>
     <string name="local_library_enable_description">Disabling will hide local library from the app</string>
     <string name="local_player_settings_title">Local media</string>
+    <string name="local_player_settings_scan_for_unavailable_songs">Scan for unavailable songs</string>
     <string name="flat_subfolders_title">Flatten subfolders</string>
     <string name="flat_subfolders_description">Disable to preserve the file structure as on disk</string>
     <string name="disable_lm_confirm">Are you sure you want to disable local media features? Your library contents will not be affected.</string>

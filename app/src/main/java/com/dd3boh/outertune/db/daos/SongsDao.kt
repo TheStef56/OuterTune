@@ -366,6 +366,9 @@ interface SongsDao {
     @Update
     fun update(song: SongEntity)
 
+    @Query("UPDATE Song SET id = :newId WHERE id = :oldId")
+    fun changeSongId(oldId: String, newId: String)
+
     @Query("UPDATE playCount SET count = count + 1 WHERE song = :songId AND year = :year AND month = :month")
     fun incrementPlayCount(songId: String, year: Int, month: Int)
 

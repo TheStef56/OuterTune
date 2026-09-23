@@ -479,26 +479,6 @@ fun AutoPlaylistScreen(
                                             contentDescription = null
                                         )
                                     }
-
-                                    IconButton(
-                                        onClick = {
-                                            // TODO: replace automatically unplayable videos (that do not exist anymore)
-                                            CoroutineScope(Dispatchers.IO).launch {
-                                                songs.forEachIndexed { index, song ->
-                                                    YTPlayerUtils.playerResponseForMetadata(song.id).let {
-                                                        Log.d("PLAYABILITY: (${song.title}) $index",
-                                                            it.getOrNull()?.playabilityStatus.toString()
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    ) {
-                                        Icon(
-                                            Icons.AutoMirrored.Rounded.FactCheck,
-                                            contentDescription = null
-                                        )
-                                    }
                                 }
                             }
                         }

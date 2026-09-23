@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.rounded.LibraryBooks
 import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Interests
+import androidx.compose.material.icons.rounded.NotInterested
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Restore
@@ -95,6 +96,11 @@ fun SettingsScreen(
                 title = { Text(stringResource(R.string.local_player_settings_title)) },
                 icon = { Icon(Icons.Rounded.SdCard, null) },
                 onClick = { navController.navigate("settings/local") }
+            )
+            PreferenceEntry(
+                title = { Text(stringResource(R.string.local_player_settings_scan_for_unavailable_songs)) },
+                icon = { Icon(Icons.Rounded.NotInterested, null) },
+                onClick = { navController.navigate("library_manager/UnavailableSongs") }
             )
         }
         Spacer(modifier = Modifier.height(16.dp))

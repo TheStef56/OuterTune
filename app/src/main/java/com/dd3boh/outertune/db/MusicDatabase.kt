@@ -68,7 +68,7 @@ class MusicDatabase(
     fun close() = delegate.close()
 
     companion object {
-        const val MUSIC_DATABASE_VERSION = 21
+        const val MUSIC_DATABASE_VERSION = 22
     }
 }
 
@@ -135,6 +135,7 @@ abstract class InternalDatabase : RoomDatabase() {
                     .addMigrations(MIGRATION_15_16)
                     .addMigrations(MIGRATION_16_17)
                     .addMigrations(MIGRATION_20_21)
+                    .addMigrations(MIGRATION_21_22)
                     .build()
             )
 
@@ -147,6 +148,7 @@ abstract class InternalDatabase : RoomDatabase() {
                     .addMigrations(MIGRATION_15_16)
                     .addMigrations(MIGRATION_16_17)
                     .addMigrations(MIGRATION_20_21)
+                    .addMigrations(MIGRATION_21_22)
                     .build()
             )
     }
@@ -489,6 +491,65 @@ val MIGRATION_20_21 = object : Migration(20, 21) {
         db.execSQL(
             "ALTER TABLE queue ADD COLUMN priorityQueueSize INTEGER NOT NULL DEFAULT 0"
         )
+    }
+}
+
+val MIGRATION_21_22 = object : Migration(21, 22) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+//      playlist_song_map
+        db.execSQL("CREATE TABLE `playlist_song_map_new` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `playlistId` TEXT NOT NULL, `songId` TEXT NOT NULL, `position` INTEGER NOT NULL, `setVideoId` TEXT, FOREIGN KEY(`playlistId`) REFERENCES `playlist`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE, FOREIGN KEY(`songId`) REFERENCES `song`(`id`) ON UPDATE CASCADE ON DELETE CASCADE)")
+        db.execSQL("INSERT INTO `playlist_song_map_new` (`id`, `playlistId`, `songId`, `position`, `setVideoId`) SELECT `id`, `playlistId`, `songId`, `position`, `setVideoId` FROM `playlist_song_map`")
+        db.execSQL("DROP TABLE `playlist_song_map`")
+        db.execSQL("ALTER TABLE `playlist_song_map_new` RENAME TO `playlist_song_map`")
+        db.execSQL("CREATE INDEX `index_playlist_song_map_playlistId` ON `playlist_song_map` (`playlistId`)")
+        db.execSQL("CREATE INDEX `index_playlist_song_map_songId` ON `playlist_song_map` (`songId`)")
+
+//      event
+        db.execSQL("CREATE TABLE `event_new` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `songId` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `playTime` INTEGER NOT NULL, FOREIGN KEY(`songId`) REFERENCES `song`(`id`) ON UPDATE CASCADE ON DELETE CASCADE)")
+        db.execSQL("INSERT INTO `event_new` (`id`, `songId`, `timestamp`, `playTime`) SELECT `id`, `songId`, `timestamp`, `playTime` FROM `event`")
+        db.execSQL("DROP TABLE `event`")
+        db.execSQL("ALTER TABLE `event_new` RENAME TO `event`")
+        db.execSQL("CREATE INDEX `index_event_songId` ON `event` (`songId`)")
+
+//      queue_song_map
+        db.execSQL("CREATE TABLE `queue_song_map_new` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `queueId` INTEGER NOT NULL, `songId` TEXT NOT NULL, `index` INTEGER NOT NULL, `shuffledIndex` INTEGER NOT NULL, FOREIGN KEY(`queueId`) REFERENCES `queue`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE, FOREIGN KEY(`songId`) REFERENCES `song`(`id`) ON UPDATE CASCADE ON DELETE CASCADE)")
+        db.execSQL("INSERT INTO `queue_song_map_new` (`id`, `queueId`, `songId`, `index`, `shuffledIndex`) SELECT `id`, `queueId`, `songId`, `index`, `shuffledIndex` FROM `queue_song_map`")
+        db.execSQL("DROP TABLE `queue_song_map`")
+        db.execSQL("ALTER TABLE `queue_song_map_new` RENAME TO `queue_song_map`")
+        db.execSQL("CREATE INDEX `index_queue_song_map_queueId` ON `queue_song_map` (`queueId`)")
+        db.execSQL("CREATE INDEX `index_queue_song_map_songId` ON `queue_song_map` (`songId`)")
+
+//      related_song_map
+        db.execSQL("CREATE TABLE `related_song_map_new` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `songId` TEXT NOT NULL, `relatedSongId` TEXT NOT NULL, FOREIGN KEY(`songId`) REFERENCES `song`(`id`) ON UPDATE CASCADE ON DELETE CASCADE, FOREIGN KEY(`relatedSongId`) REFERENCES `song`(`id`) ON UPDATE CASCADE ON DELETE CASCADE)")
+        db.execSQL("INSERT INTO `related_song_map_new` (`id`, `songId`, `relatedSongId`) SELECT `id`, `songId`, `relatedSongId` FROM `related_song_map`")
+        db.execSQL("DROP TABLE `related_song_map`")
+        db.execSQL("ALTER TABLE `related_song_map_new` RENAME TO `related_song_map`")
+        db.execSQL("CREATE INDEX `index_related_song_map_songId` ON `related_song_map` (`songId`)")
+        db.execSQL("CREATE INDEX `index_related_song_map_relatedSongId` ON `related_song_map` (`relatedSongId`)")
+
+//      song_album_map
+        db.execSQL("CREATE TABLE `song_album_map_new` (`songId` TEXT NOT NULL, `albumId` TEXT NOT NULL, `index` INTEGER NOT NULL, PRIMARY KEY(`songId`, `albumId`), FOREIGN KEY(`songId`) REFERENCES `song`(`id`) ON UPDATE CASCADE ON DELETE CASCADE, FOREIGN KEY(`albumId`) REFERENCES `album`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)")
+        db.execSQL("INSERT INTO `song_album_map_new` (`songId`, `albumId`, `index`) SELECT `songId`, `albumId`, `index` FROM `song_album_map`")
+        db.execSQL("DROP TABLE `song_album_map`")
+        db.execSQL("ALTER TABLE `song_album_map_new` RENAME TO `song_album_map`")
+        db.execSQL("CREATE INDEX `index_song_album_map_songId` ON `song_album_map` (`songId`)")
+        db.execSQL("CREATE INDEX `index_song_album_map_albumId` ON `song_album_map` (`albumId`)")
+
+//      song_artist_map
+        db.execSQL("CREATE TABLE `song_artist_map_new` (`songId` TEXT NOT NULL, `artistId` TEXT NOT NULL, `position` INTEGER NOT NULL, PRIMARY KEY(`songId`, `artistId`), FOREIGN KEY(`songId`) REFERENCES `song`(`id`) ON UPDATE CASCADE ON DELETE CASCADE, FOREIGN KEY(`artistId`) REFERENCES `artist`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)")
+        db.execSQL("INSERT INTO `song_artist_map_new` (`songId`, `artistId`, `position`) SELECT `songId`, `artistId`, `position` FROM `song_artist_map`")
+        db.execSQL("DROP TABLE `song_artist_map`")
+        db.execSQL("ALTER TABLE `song_artist_map_new` RENAME TO `song_artist_map`")
+        db.execSQL("CREATE INDEX `index_song_artist_map_songId` ON `song_artist_map` (`songId`)")
+        db.execSQL("CREATE INDEX `index_song_artist_map_artistId` ON `song_artist_map` (`artistId`)")
+
+//      song_genre_map
+        db.execSQL("CREATE TABLE `song_genre_map_new` (`songId` TEXT NOT NULL, `genreId` TEXT NOT NULL, `index` INTEGER NOT NULL, PRIMARY KEY(`songId`, `genreId`), FOREIGN KEY(`songId`) REFERENCES `song`(`id`) ON UPDATE CASCADE ON DELETE CASCADE, FOREIGN KEY(`genreId`) REFERENCES `genre`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)")
+        db.execSQL("INSERT INTO `song_genre_map_new` (`songId`, `genreId`, `index`) SELECT `songId`, `genreId`, `index` FROM `song_genre_map`")
+        db.execSQL("DROP TABLE `song_genre_map`")
+        db.execSQL("ALTER TABLE `song_genre_map_new` RENAME TO `song_genre_map`")
+        db.execSQL("CREATE INDEX `index_song_genre_map_songId` ON `song_genre_map` (`songId`)")
+        db.execSQL("CREATE INDEX `index_song_genre_map_genreId` ON `song_genre_map` (`genreId`)")
     }
 }
 

@@ -44,6 +44,10 @@ sealed class Screens(
     data object M3uList : Screens(R.string.albums, Icons.Rounded.SelectAll, "m3u_list")
     data object M3uSearch : Screens(R.string.playlists, Icons.Rounded.Check, "m3u_search")
 
+    data object UnavailableSongsList : Screens(R.string.albums, Icons.Rounded.SelectAll, "unav_s_list")
+
+    data object UnavailableSongsSearch : Screens(R.string.albums, Icons.Rounded.SelectAll, "unav_s_search")
+
 
     enum class LibraryFilter {
         ALL, ALBUMS, ARTISTS, PLAYLISTS, SONGS, FOLDERS

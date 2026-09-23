@@ -66,9 +66,12 @@ We recycle translations from upstream, they are pulled periodically. -->
     <string name="filter_mismatch">Mismatch ("%s")</string>
     <string name="import_playlist_to_get_started">Import a playlist to get
         started</string>
-    <string name="import_m3u_exit_confirm">Are you sure you want to exit?</string>
+    <string name="no_unavailable_songs_found">Unavailable songs
+        not found!</string>
+    <string name="exit_confirm">Are you sure you want to exit?</string>
     <string name="swap_song">Swap song</string>
     <string name="delete_import">Remove import</string>
+    <string name="delete_unavailable">Remove unavailable</string>
 
     <!-- Library -->
     <string name="library_song_empty">Library songs will show up here</string>
@@ -111,6 +114,7 @@ We recycle translations from upstream, they are pulled periodically. -->
     <string name="remove_download">Remove download</string>
     <string name="import_playlist">Import playlist</string>
     <string name="add_to_playlist">Add to playlist</string>
+    <string name="replace_all_with_autosearch">Replace all with autosearch</string>
     <string name="view_artist">View artist</string>
     <string name="view_album">View album</string>
     <string name="refetch">Refetch</string>
