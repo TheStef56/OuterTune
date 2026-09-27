@@ -287,20 +287,19 @@ fun replaceAllWithAutoSearch(
                 matches.add(result)
             }
 
-            val onlineResult =
-                LocalMediaScanner.youtubeSongLookup(queryText, songUrl = null)
-                onlineResult.forEach { result ->
-                    val result = Song(
-                        song = result.toSongEntity(),
-                        artists = result.artists.map {
-                            ArtistEntity(
-                                id = it.id ?: ArtistEntity.generateArtistId(),
-                                name = it.name
-                            )
-                        }
-                    )
-                    matches.add(result)
-                }
+            val onlineResult = LocalMediaScanner.youtubeSongLookup(queryText, songUrl = null)
+            onlineResult.forEach { result ->
+                val result = Song(
+                    song = result.toSongEntity(),
+                    artists = result.artists.map {
+                        ArtistEntity(
+                            id = it.id ?: ArtistEntity.generateArtistId(),
+                            name = it.name
+                        )
+                    }
+                )
+                matches.add(result)
+            }
 
             matches.distinctBy { it.id }
 

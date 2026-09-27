@@ -7,11 +7,15 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import com.dd3boh.outertune.constants.SearchSource
 import com.dd3boh.outertune.db.MusicDatabase
+import com.dd3boh.outertune.db.entities.ArtistEntity
 import com.dd3boh.outertune.db.entities.Song
+import com.dd3boh.outertune.extensions.toMediaItem
 import com.dd3boh.outertune.models.ItemsPage
+import com.dd3boh.outertune.models.toMediaMetadata
 import com.dd3boh.outertune.utils.reportException
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.SongItem
+import com.metrolist.innertube.models.YTItem
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -55,6 +59,7 @@ class UnavailableSongsViewModel @Inject constructor(
 
     var localResult: Flow<List<Song>> = flowOf(emptyList<Song>())
     var onlineResult = MutableStateFlow<ItemsPage?>(null)
+    var searchFilter = mutableStateOf(YouTube.SearchFilter.FILTER_SONG)
 
     fun onSearchQueryChange(value: TextFieldValue) {
         searchQuery.value = value
@@ -74,16 +79,17 @@ class UnavailableSongsViewModel @Inject constructor(
     // -------------------------
     // Search
     // -------------------------
+    fun search() {
+        search(searchQuery.value.text)
+    }
 
     fun search(query: String) {
         scope.launch {
             onlineResult.value = null
-            val suggestions = YouTube.searchSuggestions(query).getOrNull()
-            val items =
-                suggestions?.recommendedItems.orEmpty().distinctBy { it.id }.filter { it is SongItem }.toMutableList()
-            YouTube.search(query, YouTube.SearchFilter.FILTER_SONG)
+            val items = mutableListOf<YTItem>()
+            YouTube.search(query, searchFilter.value)
                 .onSuccess { result ->
-                    items += result.items
+                    items.addAll(result.items)
                     onlineResult.value = ItemsPage(items.distinctBy { it.id }, result.continuation)
                 }
                 .onFailure {
