@@ -58,7 +58,6 @@ fun UnavailableSongMenu(
     song: Song,
     modelIndex: Pair<UnavailableSongsViewModel, String>,
     navController: NavController,
-    unavailableSongsNavController: NavController,
     onSwapClick: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -178,7 +177,7 @@ fun UnavailableSongMenu(
         ) {
             onSwapClick()
             onDismiss()
-            unavailableSongsNavController.navigate(Screens.UnavailableSongsSearch.route)
+            navController.navigate("library_manager/UnavailableSongsSearch")
         }
 
         GridMenuItem(

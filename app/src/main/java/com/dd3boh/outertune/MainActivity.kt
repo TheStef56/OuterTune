@@ -99,11 +99,13 @@ import androidx.compose.ui.util.fastForEach
 import androidx.core.net.toUri
 import androidx.core.util.Consumer
 import androidx.core.view.WindowCompat
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.window.core.layout.WindowWidthSizeClass
@@ -147,7 +149,7 @@ import com.dd3boh.outertune.ui.screens.PlayerScreen
 import com.dd3boh.outertune.ui.screens.Screens
 import com.dd3boh.outertune.ui.screens.SetupWizard
 import com.dd3boh.outertune.ui.screens.StatsScreen
-import com.dd3boh.outertune.ui.screens.UnavailableSongsScreen
+import com.dd3boh.outertune.ui.screens.unavailablesongs.UnavailableSongsScreen
 import com.dd3boh.outertune.ui.screens.YouTubeBrowseScreen
 import com.dd3boh.outertune.ui.screens.artist.ArtistAlbumsScreen
 import com.dd3boh.outertune.ui.screens.artist.ArtistItemsScreen
@@ -179,6 +181,7 @@ import com.dd3boh.outertune.ui.screens.settings.LyricsSettings
 import com.dd3boh.outertune.ui.screens.settings.PlayerSettings
 import com.dd3boh.outertune.ui.screens.settings.SettingsScreen
 import com.dd3boh.outertune.ui.screens.settings.StorageSettings
+import com.dd3boh.outertune.ui.screens.unavailablesongs.UnavailableSongSearch
 import com.dd3boh.outertune.ui.theme.OuterTuneTheme
 import com.dd3boh.outertune.ui.utils.appBarScrollBehavior
 import com.dd3boh.outertune.utils.ActivityLauncherHelper
@@ -187,6 +190,7 @@ import com.dd3boh.outertune.utils.SyncUtils
 import com.dd3boh.outertune.utils.lmScannerCoroutine
 import com.dd3boh.outertune.utils.rememberEnumPreference
 import com.dd3boh.outertune.utils.rememberPreference
+import com.dd3boh.outertune.viewmodels.UnavailableSongsViewModel
 import com.valentinilk.shimmer.LocalShimmerTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -560,11 +564,48 @@ class MainActivity : ComponentActivity() {
                                             scrollBehavior = scrollBehavior,
                                         )
                                     }
-                                    composable("library_manager/UnavailableSongs") {
-                                        UnavailableSongsScreen(
-                                            navController = navController,
-                                            scrollBehavior = scrollBehavior,
-                                        )
+                                    navigation(
+                                        route = "library_manager",
+                                        startDestination = "library_manager/UnavailableSongs"
+                                    ) {
+                                        composable("library_manager/UnavailableSongs") { backStackEntry ->
+                                            val parentEntry = remember(backStackEntry) {
+                                                navController.getBackStackEntry("library_manager")
+                                            }
+
+                                            val viewModel: UnavailableSongsViewModel =
+                                                hiltViewModel(parentEntry)
+
+                                            UnavailableSongsScreen(
+                                                navController = navController,
+                                                scrollBehavior = scrollBehavior,
+                                                viewModel = viewModel
+                                            )
+                                        }
+
+                                        composable(
+                                            route = "library_manager/UnavailableSongsSearch?id={id}",
+                                            arguments = listOf(
+                                                navArgument("id") {
+                                                    type = NavType.StringType
+                                                    defaultValue = "None"
+                                                }
+                                            )
+                                        ) { backStackEntry ->
+                                            val parentEntry = remember(backStackEntry) {
+                                                navController.getBackStackEntry("library_manager")
+                                            }
+
+                                            val viewModel: UnavailableSongsViewModel =
+                                                hiltViewModel(parentEntry)
+
+                                            UnavailableSongSearch(
+                                                navController = navController,
+                                                scrollBehavior = scrollBehavior,
+                                                viewModel = viewModel,
+                                                backStackEntry = backStackEntry
+                                            )
+                                        }
                                     }
 
                                     composable(

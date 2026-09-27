@@ -21,6 +21,7 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.PlaylistRemove
 import androidx.compose.material.icons.rounded.Radio
 import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
@@ -336,6 +337,14 @@ fun SongMenu(
                     delete(event)
                 }
             }
+        }
+
+        GridMenuItem(
+            icon = Icons.Rounded.SwapHoriz,
+            title = R.string.swap_song
+        ) {
+            onDismiss()
+            navController.navigate("library_manager/UnavailableSongsSearch?id=${originalSong.id}")
         }
     }
 

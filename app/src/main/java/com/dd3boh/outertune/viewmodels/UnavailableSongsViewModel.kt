@@ -1,12 +1,14 @@
 package com.dd3boh.outertune.viewmodels
 
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import com.dd3boh.outertune.constants.SearchSource
 import com.dd3boh.outertune.db.MusicDatabase
 import com.dd3boh.outertune.db.entities.Song
 import com.dd3boh.outertune.models.ItemsPage
-import com.dd3boh.outertune.ui.screens.ImportM3uFilter
 import com.dd3boh.outertune.utils.reportException
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.SongItem
@@ -16,32 +18,62 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.collections.distinctBy
+import kotlin.collections.emptyList
+import kotlin.collections.orEmpty
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class UnavailableSongsViewModel @Inject constructor(
-    database: MusicDatabase,
-): ViewModel() {
+    private val database: MusicDatabase,
+) : ViewModel() {
+
     val scope = CoroutineScope(Dispatchers.IO)
+
     val unavailableSongs = mutableStateListOf<UnavailableSong>()
+
+    // -------------------------
+    // Shared UI state
+    // -------------------------
+
+    var toSwapIndex = mutableIntStateOf(0)
+
+    var searchSource = mutableStateOf(SearchSource.ONLINE)
+
+    var percentage = mutableIntStateOf(0)
+
+    var inSelectMode = mutableStateOf(false)
+
+    val selection = mutableStateListOf<String>()
+
+    var isLoading = mutableStateOf(false)
+
+    var searchQuery = mutableStateOf(TextFieldValue())
+
+    var localResult: Flow<List<Song>> = flowOf(emptyList<Song>())
     var onlineResult = MutableStateFlow<ItemsPage?>(null)
 
+    fun onSearchQueryChange(value: TextFieldValue) {
+        searchQuery.value = value
 
-    val query = MutableStateFlow("")
-
-    val localResult: Flow<List<Song>> = query.flatMapLatest { query ->
-        if (query.isEmpty()) {
-            flowOf(emptyList<Song>())
+        if (searchSource.value == SearchSource.ONLINE) {
+            search(searchQuery.value.text)
         } else {
-            database.searchSongs(query)
+            localResult =
+                if (searchQuery.value.text.isEmpty()) {
+                    flowOf(emptyList<Song>())
+                } else {
+                    database.searchSongs(searchQuery.value.text)
+                }
         }
-    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    }
+
+    // -------------------------
+    // Search
+    // -------------------------
 
     fun search(query: String) {
         scope.launch {
@@ -76,6 +108,7 @@ class UnavailableSongsViewModel @Inject constructor(
         }
 
     }
+
 }
 
 data class UnavailableSong(
