@@ -7,6 +7,7 @@ import com.metrolist.innertube.models.YouTubeLocale
 import com.metrolist.innertube.models.response.NextResponse
 import com.metrolist.innertubex.InnerTube as InnerTubeX
 import com.metrolist.innertubex.InnerTubeHttpException
+import com.metrolist.innertubex.InnerTubeLogLevel
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.okhttp.OkHttp
@@ -16,7 +17,6 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.get
 import io.ktor.client.request.header
-import io.ktor.client.request.url
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.ContentType
@@ -29,11 +29,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
+import timber.log.Timber
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import java.net.Proxy
-import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 /**
@@ -45,6 +45,15 @@ class InnerTube {
     private var configuredProxyAuth: String? = null
     private var httpClient = createClient()
     private var innerTubeX = InnerTubeX(httpClient)
+    // IF INNERTUBEX LOGGING IS NEEDED, UNCOMMENT THIS.
+//    private var innerTubeX = InnerTubeX(httpClient, logger = { event ->
+//        when (event.level) {
+//            InnerTubeLogLevel.DEBUG -> Timber.tag(event.tag).d(event.message)
+//            InnerTubeLogLevel.INFO -> Timber.tag(event.tag).i(event.message)
+//            InnerTubeLogLevel.WARN -> Timber.tag(event.tag).w(event.message)
+//            InnerTubeLogLevel.ERROR -> Timber.tag(event.tag).e(event.message)
+//        }
+//    })
     private var transportGeneration = 0L
 
     class ExtractionTransport internal constructor(
